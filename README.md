@@ -24,6 +24,7 @@ npm run db:migrate   # applique les migrations versionnées, sans reset
 npm run db:seed      # initialise la démonstration locale
 npm run db:status    # état des migrations
 npm test            # tests unitaires, sans base
+npm run test:db      # tests PostgreSQL, après setup
 npm run lint
 npm run build
 ```
@@ -55,7 +56,7 @@ Les commandes fictives sont datées du 1er au 5 octobre 2026. Les stocks fournis
 - `src/lib/services/` : règles commerciales indépendantes de l’interface.
 - `src/lib/catalog/normalize.ts` : recherche insensible aux accents et à la casse.
 - `prisma/seed.ts` : données fictives, relançables, insérées dans une transaction.
-- `tests/` : tests unitaires du calcul commercial. La suite d’intégration PostgreSQL est ajoutée dans le prochain lot.
+- `tests/` : tests unitaires et intégration PostgreSQL. Les tests d’intégration utilisent des transactions annulées ou une fixture unique supprimée ; ils ne réinitialisent pas le catalogue.
 
 Le schéma prévoit des instantanés de commande, des clés d’idempotence uniques, des sessions expirables, des jetons de reset hashés, une outbox d’emails et des historiques de stock et de statut. **Les services qui exploitent ces mécanismes restent à implémenter** : la présence des tables ne signifie pas qu’un checkout ou une authentification sont opérationnels.
 

@@ -37,7 +37,7 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | UI/UX | Partiel | Mise en page mobile-first, liens clavier, focus visible, lien d’évitement, HTML français, préférence mouvement réduit. États loading/error et formulaires restent à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
 | Performance / SEO | Partiel | Métadonnées accueil, Server Component, polices locales. Images, metadata fiches, sitemap, robots et Lighthouse ≥85 à faire. |
-| Tests | Partiel | Tests du calcul panier versionnés. La suite PostgreSQL, les tests de normalisation et le garde du seed sont ajoutés dans le prochain lot. |
+| Tests | Partiel | 9 tests unitaires et 9 tests PostgreSQL passent : contraintes, données, snapshots, dernier stock concurrent et seed relançable. Services de transitions, accès manipulés, checkout E2E et couverture ≥60 % restent à faire. |
 | Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Déploiement et documentation de paiement restent à faire. |
 | Déploiement | À faire | Choisir hébergement après socle persistant validé. |
 | Bonus | À faire | Reporter après validation du MVP ; wishlist, avis acheteurs, PDF, Stripe test et emails réels prioritaires à évaluer. |
@@ -107,3 +107,16 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - `npm run setup` réussi : création non destructive de `.env`, conteneur sain, génération, migration et seed.
 - 4 comptes bcrypt coût 12, 5 catégories, 5 artisans fictifs, 25 produits publiés, 2 promotions et 10 commandes sur les 6 statuts, dont une invitée. Instantanés d’adresses, paiements mock, historiques cohérents et confirmations simulées.
 - Dates fixes de démonstration : 1er–5 octobre 2026, pour une soutenance reproductible. Stocks du seed = disponibilité après l’historique ; aucune décrémentation rejouée lors d’une relance. TVA 20 % = hypothèse de fixture, à valider avant commercialisation.
+
+### 2026-10-06 — validations du socle PostgreSQL
+
+- `npm test` : **9 tests unitaires réussis**.
+- `npm run test:db` : **9 tests d’intégration réussis**, dont concurrence du dernier exemplaire (un succès, un refus), unicité idempotence, conservation des instantanés, refus des valeurs invalides et relance du seed sans modification/duplication.
+- Cette concurrence teste le décrément conditionnel PostgreSQL. L’atomicité de la commande complète et du paiement n’est pas encore testable : checkout non implémenté.
+- `npm run build` réussi : client généré, compilation Next.js, contrôle TypeScript et génération statique.
+- Les refus SQL attendus produisent des messages `prisma:error` pendant les tests négatifs ; les assertions passent et les transactions sont annulées.
+- Audit npm production : **0 vulnérabilité signalée** le 6 octobre 2026. Audit complet : **8 alertes high de développement**, liées à la même dépendance `braces` via ESLint/shadcn/fast-glob/ts-morph. Version disponible 3.0.3, sans correctif indiqué : [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). Ne pas annoncer un audit global sans alerte. Réévaluer avant livraison et éviter d’exécuter l’outillage sur des motifs externes non fiables.
+- `npm run lint` et `tsc --noEmit` après ajout du test de relance : réussis.
+- `npm run db:status` : schéma à jour.
+- `npm ci --ignore-scripts --dry-run` : réussi, verrou npm cohérent. Le contrôle hors ligne a d’abord échoué faute de métadonnées en cache ; la vérification avec accès au registre a réussi. Ce dry-run ne remplace pas une installation complète sur une machine vierge.
+- `git diff --check` : réussi.
