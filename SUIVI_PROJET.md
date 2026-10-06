@@ -33,12 +33,12 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | D1–D5 checkout | À faire | Invité et compte, adresse, paiement, transaction stock, confirmation, référence atomique. |
 | E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
 | F emails | À faire | Outbox en BDD ; événements inscription, commande, expédition, reset, admin. |
-| BDD / seed / migrations | Partiel | Schéma complet, migration initiale appliquée et client PostgreSQL prêts. Seed et setup dans le prochain lot. |
+| BDD / seed / migrations | Fait | Schéma PostgreSQL complet, migration versionnée et appliquée ; 1 admin +3 clients hashés, 5 artisans et catégories, 25 produits illustrés, 2 promotions, 10 commandes, adresses et emails simulés. Relance sans duplication vérifiée. |
 | UI/UX | Partiel | Mise en page mobile-first, liens clavier, focus visible, lien d’évitement, HTML français, préférence mouvement réduit. États loading/error et formulaires restent à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
 | Performance / SEO | Partiel | Métadonnées accueil, Server Component, polices locales. Images, metadata fiches, sitemap, robots et Lighthouse ≥85 à faire. |
-| Tests | Partiel | Tests métier panier ; stock concurrent, transitions, accès manipulés, checkout E2E et couverture ≥60 % à faire. |
-| Documentation / DX | Partiel | Suivi, README et exemple env présents. Installation BDD ≤3 commandes et comptes seed à finaliser. |
+| Tests | Partiel | Tests du calcul panier versionnés. La suite PostgreSQL, les tests de normalisation et le garde du seed sont ajoutés dans le prochain lot. |
+| Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Déploiement et documentation de paiement restent à faire. |
 | Déploiement | À faire | Choisir hébergement après socle persistant validé. |
 | Bonus | À faire | Reporter après validation du MVP ; wishlist, avis acheteurs, PDF, Stripe test et emails réels prioritaires à évaluer. |
 
@@ -58,7 +58,7 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 
 ## Ordre des prochains lots
 
-1. Stabiliser Prisma/client, PostgreSQL local, schéma, migrations et seed reproductible.
+1. **Terminé :** stabiliser Prisma/client, PostgreSQL local, schéma, migrations et seed reproductible.
 2. Catalogue branché sur BDD, fiche produit, recherche et filtres URL.
 3. Panier persistant et promotions validées serveur, puis auth et fusion panier.
 4. Checkout invité transactionnel, tests concurrence/idempotence et emails simulés.
@@ -83,6 +83,17 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 
 À la demande explicite de l’utilisateur : commits clairs et progressifs à chaque lot cohérent, documentation mise à jour avec le code, aucun commit final monolithique. Aucun secret, `.env`, client généré ou donnée de base ne doit être versionné. Les commits sont locaux ; aucun push distant n’a été demandé.
 
+## Décisions du lot base de données
+
+| Réf. | Choix | Pourquoi / limites |
+|---|---|---|
+| ADR-010 | Seed transactionnel avec IDs stables et upserts sans mise à jour | Créer les éléments absents tout en préservant mots de passe, prix, stocks et commandes modifiés. Ne répare pas automatiquement une fixture altérée ; aucun reset implicite. |
+| ADR-011 | Seed et tests réservés à une BDD `artisanova` sur localhost, hors production, avec SEED_DEMO=true | Les identifiants publics de démonstration ne doivent jamais être injectés sur une base distante. Le garde contrôle aussi le protocole PostgreSQL. |
+| ADR-012 | Cinq illustrations SVG locales réutilisées selon la catégorie | Démonstration autonome et légère ; visuels explicitement fictifs. Photos réelles, galerie variée et caractéristiques produit restent à fournir avant commercialisation. |
+| ADR-013 | Une adresse par défaut par client et par type livraison/facturation | Index unique partiel PostgreSQL pour éviter deux valeurs par défaut, même lors de requêtes concurrentes. |
+| ADR-014 | Contraintes SQL en plus du schéma Prisma | Stock/prix positifs ou nuls, totaux cohérents, panier à propriétaire unique, promotion valide, cinq images maximum, code postal/country français. Minimum une image pour un produit publié et cohérence de tous les agrégats à vérifier dans les futurs services. |
+| ADR-015 | Séparer tests unitaires et tests PostgreSQL | Tests rapides sans infrastructure ; vérification réelle des garanties SQL. Transactions annulées et fixture de concurrence supprimée. Un test rejoue effectivement le seed et compare les données avant/après. |
+| ADR-016 | Correctifs npm ciblés et CLI shadcn en devDependency | Overrides : deepmerge-ts 8.0.2, mysql2 3.24.5, source-map-js 1.2.2, SDK MCP 1.32.1. Compatibilité validée par génération Prisma, migration, seed, tests et build. Réexaminer les overrides lors d’une mise à jour upstream, surtout deepmerge-ts qui change de version majeure. |
 
 ### 2026-10-06 — schéma et migration
 
@@ -90,3 +101,9 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Migration `202610060001_initial` générée, complétée avec les contraintes SQL puis appliquée avec succès. Ne plus modifier cette migration appliquée ; toute évolution doit créer une nouvelle migration.
 - Tables prévues pour tous les modules, plus sessions, reset, outbox, séquences et historiques. Leur présence ne signifie pas que l’authentification ou le checkout sont implémentés.
 - Génération et build possibles sans connexion BDD sur l’accueil actuel. Les futures pages dynamiques devront gérer les erreurs de connexion.
+
+### 2026-10-06 — seed et installation
+
+- `npm run setup` réussi : création non destructive de `.env`, conteneur sain, génération, migration et seed.
+- 4 comptes bcrypt coût 12, 5 catégories, 5 artisans fictifs, 25 produits publiés, 2 promotions et 10 commandes sur les 6 statuts, dont une invitée. Instantanés d’adresses, paiements mock, historiques cohérents et confirmations simulées.
+- Dates fixes de démonstration : 1er–5 octobre 2026, pour une soutenance reproductible. Stocks du seed = disponibilité après l’historique ; aucune décrémentation rejouée lors d’une relance. TVA 20 % = hypothèse de fixture, à valider avant commercialisation.

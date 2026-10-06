@@ -9,8 +9,10 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "test": "tsx --test tests/*.test.mjs",
+    "setup": "node scripts/setup.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
     "db:status": "prisma migrate status"
   },
   "dependencies": {
