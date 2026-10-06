@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Artisanova
 
-## Getting Started
+Projet pédagogique e-commerce de créations artisanales françaises, basé sur Next.js App Router, React, TypeScript strict et Tailwind CSS.
 
-First, run the development server:
+## État actuel
 
-```bash
+Première étape : accueil responsive, identité visuelle et calcul commercial testé. Catalogue, panier persistant, comptes, checkout, BDD et administration ne sont pas encore implémentés. Le fichier [SUIVI_PROJET.md](SUIVI_PROJET.md) détaille chaque exigence, les décisions et les limites.
+
+## Démarrage local
+
+Prérequis : Node.js 22.18 ou plus récent, npm.
+
+```sh
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrir http://localhost:3000. L’accueil ne nécessite pas de variable d’environnement. `.env.example` prépare la future configuration PostgreSQL ; aucune connexion n’est actuellement utilisée.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Vérifications
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sh
+npm test
+npm run lint
+npm run build
+```
 
-## Learn More
+Les tests initiaux utilisent le runner Node et son support TypeScript. La suite couvre les règles de panier et promotion, pas encore la persistance ni un achat complet. Les prix sont exprimés en centimes entiers. Le port est gratuit à partir de 60 € **après remise**, pour les trois modes de livraison.
 
-To learn more about Next.js, take a look at the following resources:
+## Démonstration et limites
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Les cinq collections de l’accueil sont illustrées en CSS. Aucune commande ne peut encore être passée. Aucun compte de test ni carte de paiement n’est disponible : ils seront documentés quand le seed et le paiement seront opérationnels. Les seuils Lighthouse et la conformité WCAG restent à vérifier par audit ; ils ne sont pas revendiqués.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le CLI Prisma RC et le client déjà installés devront être alignés avant le lot BDD. Les modifications préexistantes de l’environnement ont été conservées.
