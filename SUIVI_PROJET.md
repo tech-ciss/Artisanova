@@ -12,13 +12,13 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | Réf. | Choix | Pourquoi / conséquences |
 |---|---|---|
 | ADR-001 | Conserver Next.js App Router, TypeScript strict et Tailwind déjà installés | Respect du sujet, pas de remplacement inutile du squelette. Server Components par défaut. |
-| ADR-002 | PostgreSQL + ORM Prisma envisagés, à stabiliser avant schéma | Transactions et concurrence stock. Le CLI Prisma 8 RC et le client 7 présents doivent être alignés sur une version stable compatible avant toute migration. Aucune BDD opérationnelle actuellement. |
+| ADR-002 | PostgreSQL 17 local via Docker ; Prisma CLI/client/adaptateur 7.10.0 stables et alignés | Migration initiale appliquée. Port 5433 lié à 127.0.0.1, volume persistant, client serveur à connexion différée. L’ancienne RC a été retirée. |
 | ADR-003 | Prix en centimes entiers ; service pur séparé de l’interface | Éviter les erreurs monétaires et permettre les tests ; au checkout charger les prix depuis la BDD, jamais depuis le navigateur. |
 | ADR-004 | Seuil de port gratuit : 60 € après remise, pour les trois modes | Arbitrage d’une ambiguïté B3/D2. Tarifs standard 590, relais 490, express 990 centimes ; PORT0 annule le port. Afficher cette règle dans le panier futur. |
 | ADR-005 | Checkout invité prioritaire : livraison → paiement → confirmation | Maximum trois étapes, sans connexion forcée. Création de compte facultative après achat. Non implémenté. |
 | ADR-006 | Palette crème / brun / vert / terre cuite, typographies système et Georgia | Identité chaleureuse, aucune dépendance au téléchargement Google Fonts pour construire le projet. |
 | ADR-007 | Illustrations CSS temporaires | Accueil léger sans fausses photos produits. Remplacer par photos avec alternatives et next/image lors du catalogue. |
-| ADR-008 | Tests initiaux via node:test et effacement des types Node 22.18+ | Tester immédiatement sans nouvelle dépendance. Simplification temporaire par rapport à Vitest recommandé ; couverture instrumentée ≥60 % restant à mettre en place. |
+| ADR-008 | node:test avec tsx pour les imports TypeScript et le client généré | Tests unitaires sans BDD ; suite d’intégration PostgreSQL séparée. ESM explicite, avertissement initial supprimé. Vitest et couverture instrumentée ≥60 % restent à mettre en place. |
 | ADR-009 | Paiement simulé prévu en premier, puis Stripe test si socle validé | Autorisé par le sujet. Aucun traitement de vraie carte ; interface clairement marquée démonstration. Pas encore implémenté. |
 
 ## Matrice de couverture
@@ -33,7 +33,7 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | D1–D5 checkout | À faire | Invité et compte, adresse, paiement, transaction stock, confirmation, référence atomique. |
 | E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
 | F emails | À faire | Outbox en BDD ; événements inscription, commande, expédition, reset, admin. |
-| BDD / seed / migrations | À faire | Schéma complet, contraintes, migrations versionnées, admin +3 clients, 5 artisans et catégories, ~10 commandes. |
+| BDD / seed / migrations | Partiel | Schéma complet, migration initiale appliquée et client PostgreSQL prêts. Seed et setup dans le prochain lot. |
 | UI/UX | Partiel | Mise en page mobile-first, liens clavier, focus visible, lien d’évitement, HTML français, préférence mouvement réduit. États loading/error et formulaires restent à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
 | Performance / SEO | Partiel | Métadonnées accueil, Server Component, polices locales. Images, metadata fiches, sitemap, robots et Lighthouse ≥85 à faire. |
@@ -78,3 +78,15 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - `git diff --check` : réussi.
 - Le runner Node émet un avertissement de détection ESM (sans échec) : configuration des tests à harmoniser lors du lot Vitest/couverture.
 - Aucun test navigateur, score Lighthouse, achat réel ou simulation complète réalisé à ce stade.
+
+## Politique de versionnement
+
+À la demande explicite de l’utilisateur : commits clairs et progressifs à chaque lot cohérent, documentation mise à jour avec le code, aucun commit final monolithique. Aucun secret, `.env`, client généré ou donnée de base ne doit être versionné. Les commits sont locaux ; aucun push distant n’a été demandé.
+
+
+### 2026-10-06 — schéma et migration
+
+- PostgreSQL 17 démarré via Compose, schéma Prisma validé et client généré.
+- Migration `202610060001_initial` générée, complétée avec les contraintes SQL puis appliquée avec succès. Ne plus modifier cette migration appliquée ; toute évolution doit créer une nouvelle migration.
+- Tables prévues pour tous les modules, plus sessions, reset, outbox, séquences et historiques. Leur présence ne signifie pas que l’authentification ou le checkout sont implémentés.
+- Génération et build possibles sans connexion BDD sur l’accueil actuel. Les futures pages dynamiques devront gérer les erreurs de connexion.

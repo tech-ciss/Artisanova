@@ -1,0 +1,363 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+}
+
+enum AddressType {
+  SHIPPING
+  BILLING
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PREPARING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum ShippingMethod {
+  STANDARD
+  RELAY
+  EXPRESS
+}
+
+enum PromoType {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  SIMULATED
+  FAILED
+}
+
+enum StockMovementKind {
+  SALE
+  CANCELLATION
+  ADJUSTMENT
+}
+
+model User {
+  id            String               @id @default(cuid())
+  email         String               @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          Role                 @default(CLIENT)
+  createdAt     DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime             @updatedAt @db.Timestamptz(3)
+  addresses     Address[]
+  sessions      Session[]
+  resets        PasswordResetToken[]
+  cart          Cart?
+  orders        Order[]
+  statusChanges OrderStatusHistory[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model Address {
+  id        String      @id @default(cuid())
+  userId    String
+  firstName String
+  lastName  String
+  line1     String
+  line2     String?
+  city      String
+  zip       String
+  country   String      @default("FR")
+  isDefault Boolean     @default(false)
+  type      AddressType
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("addresses")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  image       String?
+  description String?
+  isArchived  Boolean   @default(false)
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Artisan {
+  id       String    @id @default(cuid())
+  name     String
+  bio      String
+  avatar   String?
+  products Product[]
+
+  @@map("artisans")
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  title          String
+  slug           String          @unique
+  description    String
+  searchText     String
+  priceCents     Int
+  vatBasisPoints Int             @default(2000)
+  stock          Int             @default(0)
+  categoryId     String
+  artisanId      String
+  status         ProductStatus   @default(DRAFT)
+  isFeatured     Boolean         @default(false)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
+  category       Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  artisan        Artisan         @relation(fields: [artisanId], references: [id], onDelete: Restrict)
+  images         ProductImage[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+
+  @@index([status, categoryId, priceCents])
+  @@index([status, createdAt])
+  @@index([status, isFeatured])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  alt       String
+  position  Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, position])
+  @@map("product_images")
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  sessionId String?    @unique
+  updatedAt DateTime   @updatedAt @db.Timestamptz(3)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, productId])
+  @@index([productId])
+  @@map("cart_items")
+}
+
+model PromoCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  type      PromoType
+  value     Int
+  expiresAt DateTime? @db.Timestamptz(3)
+  maxUses   Int?
+  usedCount Int       @default(0)
+  isActive  Boolean   @default(true)
+  orders    Order[]
+
+  @@map("promo_codes")
+}
+
+model Order {
+  id                String               @id @default(cuid())
+  reference         String               @unique
+  idempotencyKey    String               @unique
+  accessTokenHash   String?              @unique
+  userId            String?
+  email             String
+  status            OrderStatus          @default(PENDING_PAYMENT)
+  shippingMethod    ShippingMethod
+  subtotalCents     Int
+  shippingCents     Int
+  discountCents     Int
+  totalCents        Int
+  promoCodeId       String?
+  promoCodeSnapshot String?
+  invoiceNumber     String?              @unique
+  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime             @updatedAt @db.Timestamptz(3)
+  user              User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  promoCode         PromoCode?           @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  items             OrderItem[]
+  addresses         OrderAddress[]
+  payments          Payment[]
+  history           OrderStatusHistory[]
+  emails            EmailLog[]
+  stockMovements    StockMovement[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  productId      String?
+  title          String
+  unitPriceCents Int
+  vatBasisPoints Int
+  quantity       Int
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderAddress {
+  id        String      @id @default(cuid())
+  orderId   String
+  type      AddressType
+  firstName String
+  lastName  String
+  line1     String
+  line2     String?
+  city      String
+  zip       String
+  country   String      @default("FR")
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, type])
+  @@map("order_addresses")
+}
+
+model OrderStatusHistory {
+  id        String       @id @default(cuid())
+  orderId   String
+  from      OrderStatus?
+  to        OrderStatus
+  actorId   String?
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor     User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@index([actorId])
+  @@map("order_status_history")
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String
+  provider    String
+  providerRef String?       @unique
+  status      PaymentStatus @default(PENDING)
+  amountCents Int
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+model EmailLog {
+  id        String      @id @default(cuid())
+  eventKey  String      @unique
+  orderId   String?
+  recipient String
+  template  String
+  payload   Json
+  status    EmailStatus @default(PENDING)
+  attempts  Int         @default(0)
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+  sentAt    DateTime?   @db.Timestamptz(3)
+  order     Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([orderId])
+  @@map("email_logs")
+}
+
+model OrderSequence {
+  day   String @id
+  value Int    @default(0)
+
+  @@map("order_sequences")
+}
+
+model StockMovement {
+  id        String            @id @default(cuid())
+  productId String
+  orderId   String?
+  kind      StockMovementKind
+  delta     Int
+  createdAt DateTime          @default(now()) @db.Timestamptz(3)
+  product   Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
+  order     Order?            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId, kind])
+  @@index([productId, createdAt])
+  @@map("stock_movements")
+}

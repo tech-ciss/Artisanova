@@ -1,0 +1,19 @@
+name: artisanova-local
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: artisanova
+      POSTGRES_USER: artisanova
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-artisanova-local-only}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - artisanova_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artisanova -d artisanova"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  artisanova_postgres:
