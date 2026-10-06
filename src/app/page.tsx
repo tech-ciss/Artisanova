@@ -1,69 +1,38 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowDown, ArrowUpRight, Leaf, Package, Heart } from "lucide-react";
+
+const categories = [
+  { name: "Céramiques", detail: "La beauté de l’imparfait", icon: "◒", color: "clay" },
+  { name: "Bougies & savons", detail: "Les petits rituels du quotidien", icon: "◓", color: "sand" },
+  { name: "Bijoux", detail: "Des détails qui vous ressemblent", icon: "◎", color: "rose" },
+  { name: "Textiles", detail: "De la douceur, naturellement", icon: "▧", color: "sage" },
+  { name: "Cosmétiques naturels", detail: "Prendre soin, tout simplement", icon: "❋", color: "cream" },
+];
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+  return <>
+    <div className="announcement">L’artisanat français, à portée de main</div>
+    <header className="site-header">
+      <Link className="wordmark" href="/" aria-label="Artisanova, accueil">artisanova<span>✳</span></Link>
+      <nav aria-label="Navigation principale"><a href="#collections">Les collections</a><a href="#histoire">Notre histoire</a></nav>
+    </header>
+    <main id="contenu" tabIndex={-1}>
+      <section className="hero" aria-labelledby="hero-title">
+        <div className="hero-copy"><p className="eyebrow">FAIT AVEC LE CŒUR · EN FRANCE</p>
+          <h1 id="hero-title">Des objets.<br />Des histoires.<br /><em>Du sens.</em></h1>
+          <p>Des créations singulières pour les petits moments de la vie. Explorez l’univers des artisans français, et faites une place au fait main.</p>
+          <a className="cta" href="#collections">Explorer les collections <ArrowUpRight aria-hidden="true" size={20} /></a>
+          <a className="quiet-link" href="#histoire">Rencontrer Artisanova <ArrowDown aria-hidden="true" size={16} /></a>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+        <div className="hero-art" aria-hidden="true"><div className="art-caption">LE GOÛT DES CHOSES SIMPLES</div><div className="sun" /><div className="vase"><div className="stem stem-one" /><div className="stem stem-two" /><div className="stem stem-three" /></div><div className="bowl" /><div className="art-label">Une autre façon<br />de consommer.</div></div>
+      </section>
+      <div className="values" aria-label="Nos engagements"><span><Heart aria-hidden="true" size={20} /> Une sélection à taille humaine</span><span><Leaf aria-hidden="true" size={20} /> L’artisanat à l’honneur</span><span><Package aria-hidden="true" size={20} /> Des objets pour le quotidien</span></div>
+      <section id="collections" className="collections" aria-labelledby="collections-title"><div className="section-heading"><div><p className="eyebrow">À CHAQUE ENVIE, SON UNIVERS</p><h2 id="collections-title">Le quotidien, en plus beau.</h2></div><p>Cinq univers à découvrir.<br />Une même attention aux détails.</p></div>
+        <div className="category-grid">{categories.map(category => <article className="category" key={category.name}><div className={`category-art ${category.color}`} aria-hidden="true">{category.icon}</div><h3>{category.name}</h3><p>{category.detail}</p></article>)}</div>
+        <p className="demo-note">La boutique se prépare : le catalogue et la commande seront disponibles dans une prochaine étape.</p>
+      </section>
+      <section id="histoire" className="story" aria-labelledby="story-title"><p className="eyebrow">DE NANTES À VOTRE QUOTIDIEN</p><h2 id="story-title">Derrière chaque objet,<br />il y a des mains.</h2><p>Artisanova est née sur les marchés de créateurs et sur Instagram. Notre prochaine étape : réunir ces découvertes dans une boutique chaleureuse, où chaque création a la place de raconter son histoire.</p></section>
+    </main>
+    <footer className="site-footer"><Link className="wordmark" href="/">artisanova<span>✳</span></Link><p>Des objets choisis avec soin. Un projet né à Nantes.</p><a href="#contenu">Retour en haut ↑</a></footer>
+  </>;
 }
