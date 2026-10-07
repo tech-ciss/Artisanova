@@ -198,6 +198,7 @@ model Cart {
   updatedAt DateTime   @updatedAt @db.Timestamptz(3)
   user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
+  checkouts CheckoutDraft[]
 
   @@map("carts")
 }
@@ -234,6 +235,7 @@ model Order {
   reference         String               @unique
   idempotencyKey    String               @unique
   accessTokenHash   String?              @unique
+  accessTokenExpiresAt DateTime? @db.Timestamptz(3)
   userId            String?
   email             String
   status            OrderStatus          @default(PENDING_PAYMENT)
@@ -255,6 +257,7 @@ model Order {
   history           OrderStatusHistory[]
   emails            EmailLog[]
   stockMovements    StockMovement[]
+  checkout          CheckoutDraft?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -371,4 +374,22 @@ model AuthThrottle {
 
   @@index([resetsAt])
   @@map("auth_throttles")
+}
+
+model CheckoutDraft {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  cartId      String
+  ownerKey    String
+  data        Json
+  fingerprint String
+  expiresAt   DateTime @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  orderId     String?  @unique
+  cart        Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([expiresAt])
+  @@index([cartId])
+  @@map("checkout_drafts")
 }

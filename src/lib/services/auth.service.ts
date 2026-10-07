@@ -60,7 +60,17 @@ async function issueSession(tx: Prisma.TransactionClient, userId: string, guestH
   await tx.session.create({ data: { userId, tokenHash: tokenHash(token)!, expiresAt } });
   return { token, expiresAt, merged };
 }
-export async function authenticate(db: PrismaClient, raw: unknown, guestHash: string | null, oldToken?: string) {
+async function attachGuestOrder(tx: Prisma.TransactionClient, userId: string, email: string, receiptHash?: string) {
+  if (!receiptHash) return undefined;
+  const order = await tx.order.findFirst({ where: { accessTokenHash: receiptHash, accessTokenExpiresAt: { gt: new Date() }, email }, select: { id: true, reference: true, userId: true } });
+  if (!order || (order.userId && order.userId !== userId)) throw new AuthError("Pour rattacher la commande, utilisez son adresse email et le navigateur de confirmation. L’accès peut aussi avoir expiré.");
+  if (!order.userId) {
+    const changed = await tx.order.updateMany({ where: { id: order.id, userId: null }, data: { userId } });
+    if (!changed.count && (await tx.order.findUnique({ where: { id: order.id }, select: { userId: true } }))?.userId !== userId) throw new AuthError("Cette commande ne peut plus être rattachée.");
+  }
+  return order.reference;
+}
+export async function authenticate(db: PrismaClient, raw: unknown, guestHash: string | null, oldToken?: string, receiptHash?: string) {
   const parsed = loginInput.safeParse(raw);
   if (!parsed.success) throw new AuthError("Vérifiez votre email et votre mot de passe.");
   const { email, password } = parsed.data;
@@ -68,9 +78,12 @@ export async function authenticate(db: PrismaClient, raw: unknown, guestHash: st
   const user = await db.user.findUnique({ where: { email }, select: { ...userSelect, passwordHash: true } });
   const valid = await compare(password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !valid) throw new AuthError("Email ou mot de passe incorrect.");
-  return db.$transaction(tx => issueSession(tx, user.id, guestHash, oldToken), { timeout: 15000 });
+  return db.$transaction(async tx => {
+    const attachedReference = await attachGuestOrder(tx, user.id, user.email, receiptHash);
+    return { ...await issueSession(tx, user.id, guestHash, oldToken), attachedReference };
+  }, { timeout: 15000 });
 }
-export async function register(db: PrismaClient, raw: unknown, guestHash: string | null, oldToken?: string) {
+export async function register(db: PrismaClient, raw: unknown, guestHash: string | null, oldToken?: string, receiptHash?: string) {
   const parsed = signupInput.safeParse(raw);
   if (!parsed.success) throw new AuthError("Vérifiez les informations du formulaire.");
   const { email, password, firstName, lastName } = parsed.data;
@@ -79,7 +92,8 @@ export async function register(db: PrismaClient, raw: unknown, guestHash: string
   try {
     return await db.$transaction(async tx => {
       const user = await tx.user.create({ data: { email, passwordHash, firstName, lastName }, select: { id: true } });
-      return issueSession(tx, user.id, guestHash, oldToken);
+      const attachedReference = await attachGuestOrder(tx, user.id, email, receiptHash);
+      return { ...await issueSession(tx, user.id, guestHash, oldToken), attachedReference };
     }, { timeout: 15000 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new AuthError("Impossible de créer ce compte. Vérifiez les informations ou connectez-vous.");
