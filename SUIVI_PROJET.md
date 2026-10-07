@@ -155,3 +155,11 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Avertissement de dépréciation observé avec pg 8.23 lors des lectures Prisma : non bloquant ; vérifier la compatibilité de l’adaptateur avant une évolution vers pg 9. Aucun contournement ni suppression d’avertissement.
 - Simplifications : illustrations SVG de démonstration (aperçu social SVG à remplacer par une image bitmap avant publication) ; galerie multi-image implémentée mais seed à une image par produit ; pas de full-text/trigram ni autocomplete (bonus), pas d’ajout au panier dans ce lot.
 - Pas de score Lighthouse, certification WCAG, test visuel 320 px/zoom ou validation interactive galerie/curseur revendiqués.
+
+### 2026-10-07 — panier persistant, service serveur
+
+- Cookie invité opaque aléatoire 256 bits, HttpOnly, SameSite=Lax, Secure en production, durée glissante de 30 jours après mutation. Seul son SHA-256 est conservé dans sessionId ; aucun identifiant de panier fourni par le navigateur n’est utilisé pour l’autorisation.
+- Migration additive : code promotionnel sélectionné conservé dans Cart. Validation Zod et relecture des produits, prix, publication, catégorie et stock côté serveur. Limites : 999 pièces par ligne, 100 créations différentes.
+- Mutations transactionnelles et verrou de ligne du panier pour les onglets concurrents. Aucun stock réservé par le panier. Un seul code ; validité relue au calcul, sans consommer ses utilisations avant une future commande.
+- Lignes devenues indisponibles conservées et signalées, exclues du total. Promo devenue invalide signalée et remise retirée du calcul.
+- Fusion avec panier compte différée à l’authentification : aucun compte ni connexion simulés. Nettoyage planifié des paniers abandonnés à ajouter avant exploitation ; expiration du cookie ne supprime pas les lignes en base.

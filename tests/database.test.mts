@@ -190,3 +190,30 @@ test("catalogue : brouillons et catégories archivées invisibles sur toutes les
   assert.ok(related.every(entry => entry.id !== product.id && entry.category.id === product.categoryId));
   assert.equal((await featuredProducts(db)).length, 5);
 });
+
+test("panier : persistance, isolation, stock, promo et ajouts concurrents", async () => {
+  const { mutateCart, readCart, tokenHash, CartError } = await import("../src/lib/services/persistent-cart.service");
+  const sessionId = `test-cart-${randomUUID()}`;
+  const other = `test-cart-${randomUUID()}`;
+  try {
+    assert.equal(tokenHash("arbitrary-cart-id"), null);
+    assert.equal(tokenHash("a".repeat(64))?.length, 64);
+    const productId = "demo-product-1-1";
+    await Promise.all([1, 2].map(() => mutateCart(db, sessionId, { operation: "add", productId, quantity: 1 })));
+    let cart = await readCart(db, sessionId);
+    assert.equal(cart.count, 2);
+    assert.equal(cart.totals.subtotalCents, 4800);
+    assert.equal((await readCart(db, other)).count, 0);
+    await assert.rejects(mutateCart(db, sessionId, { operation: "set", productId, quantity: 999 }), CartError);
+    await assert.rejects(mutateCart(db, sessionId, { operation: "add", productId: "demo-product-3-5", quantity: 1 }), CartError);
+    await assert.rejects(mutateCart(db, sessionId, { operation: "promo", code: "UNKNOWN" }), CartError);
+    await mutateCart(db, sessionId, { operation: "promo", code: " bienvenue10 " });
+    cart = await readCart(db, sessionId);
+    assert.equal(cart.totals.discountCents, 480);
+    assert.equal(cart.totals.totalCents, 4910);
+    await mutateCart(db, sessionId, { operation: "set", productId, quantity: 1 });
+    assert.equal((await readCart(db, sessionId)).count, 1);
+    await mutateCart(db, sessionId, { operation: "remove", productId });
+    assert.equal((await readCart(db, sessionId)).totals.totalCents, 0);
+  } finally { await db.cart.deleteMany({ where: { sessionId: { in: [sessionId, other] } } }); }
+});

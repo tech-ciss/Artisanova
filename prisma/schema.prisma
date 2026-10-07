@@ -190,6 +190,7 @@ model ProductImage {
 }
 
 model Cart {
+  promoCode String?
   id        String     @id @default(cuid())
   userId    String?    @unique
   sessionId String?    @unique
