@@ -15,11 +15,11 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | ADR-002 | PostgreSQL 17 local via Docker ; Prisma CLI/client/adaptateur 7.10.0 stables et alignés | Migration initiale appliquée. Port 5433 lié à 127.0.0.1, volume persistant, client serveur à connexion différée. L’ancienne RC a été retirée. |
 | ADR-003 | Prix en centimes entiers ; service pur séparé de l’interface | Éviter les erreurs monétaires et permettre les tests ; au checkout charger les prix depuis la BDD, jamais depuis le navigateur. |
 | ADR-004 | Seuil de port gratuit : 60 € après remise, pour les trois modes | Arbitrage d’une ambiguïté B3/D2. Tarifs standard 590, relais 490, express 990 centimes ; PORT0 annule le port. Afficher cette règle dans le panier futur. |
-| ADR-005 | Checkout invité prioritaire : livraison → paiement → confirmation | Maximum trois étapes, sans connexion forcée. Création de compte facultative après achat. Non implémenté. |
+| ADR-005 | Checkout invité prioritaire : livraison → paiement → confirmation | Maximum trois étapes, sans connexion forcée. Création de compte facultative après achat. Implémenté et testé. |
 | ADR-006 | Palette crème / brun / vert / terre cuite, typographies système et Georgia | Identité chaleureuse, aucune dépendance au téléchargement Google Fonts pour construire le projet. |
 | ADR-007 | Illustrations CSS temporaires | Accueil léger sans fausses photos produits. Remplacer par photos avec alternatives et next/image lors du catalogue. |
 | ADR-008 | node:test avec tsx pour les imports TypeScript et le client généré | Tests unitaires sans BDD ; suite d’intégration PostgreSQL séparée. ESM explicite, avertissement initial supprimé. Vitest et couverture instrumentée ≥60 % restent à mettre en place. |
-| ADR-009 | Paiement simulé prévu en premier, puis Stripe test si socle validé | Autorisé par le sujet. Aucun traitement de vraie carte ; interface clairement marquée démonstration. Pas encore implémenté. |
+| ADR-009 | Paiement simulé prévu en premier, puis Stripe test si socle validé | Autorisé par le sujet. Aucun traitement de vraie carte ; interface clairement marquée démonstration. Implémenté avec fixtures locales, sans débit. |
 
 ## Matrice de couverture
 
@@ -29,18 +29,18 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | A2–A5 catalogue | Fait | Catalogue PostgreSQL, pagination 12, tris, filtres combinés partageables, prix avec curseur, recherche normalisée, galerie, artisan, stock et similaires. Mesures de performance et audit navigateur détaillés dans le journal. |
 | A6 ajout au panier | Fait | Quantité et ajout depuis la fiche, stock validé côté serveur, confirmation et lien vers le panier. |
 | B1–B2 panier | Fait | Panier invité/compte, badge global, quantités, suppression, fusion transactionnelle à inscription/connexion et persistance après déconnexion. |
-| B3–B4 calcul et promotion | Partiel | Récapitulatif et code unique validé en BDD réalisés ; consommation atomique lors de la commande à venir. |
-| C1–C2 authentification | Partiel | Inscription, connexion, déconnexion, session expirante et panier compte réalisés/testés ; commande invité reste dans D. |
+| B3–B4 calcul et promotion | Fait | Calcul serveur, code unique et consommation atomique limitée/expirable au paiement, concurrence testée. |
+| C1–C2 authentification | Fait | Inscription, connexion, déconnexion, session expirante, fusion du panier et achat invité vérifiés. |
 | C3–C5 espace client | À faire | Adresses, profil, historique de commandes et facture ; page compte minimale présente. |
-| D1–D5 checkout | À faire | Invité et compte, adresse, paiement, transaction stock, confirmation, référence atomique. |
+| D1–D5 checkout | Fait / simplifié | Invité/compte, livraison/facturation, paiement simulé, stock/promo atomiques, référence, confirmation privée. Relais fictifs et France uniquement ; preuves dans le journal. |
 | E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
-| F emails | À faire | Outbox en BDD ; événements inscription, commande, expédition, reset, admin. |
+| F emails | Partiel | Commande client/admin et reprise outbox simulées ; inscription, expédition et reset restent à faire. |
 | BDD / seed / migrations | Fait | Schéma PostgreSQL complet, migration versionnée et appliquée ; 1 admin +3 clients hashés, 5 artisans et catégories, 25 produits illustrés, 2 promotions, 10 commandes, adresses et emails simulés. Relance sans duplication vérifiée. |
 | UI/UX | Partiel | Catalogue mobile-first, champs associés aux labels, erreurs de filtres, pagination, état vide, chargement et reprise après erreur. Formulaires panier/authentification livrés ; audit navigateur et autres modules restent à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
 | Performance / SEO | Partiel | Métadonnées produit/OG/canoniques, next/image, sitemap des produits publics et robots. Recherche locale mesurée ; Lighthouse ≥85 et aperçu social réel restent à vérifier. |
-| Tests | Partiel | 14 tests unitaires, 16 tests PostgreSQL et contrôles HTTP panier/catalogue/auth passent en développement ; auth également vérifiée sur serveur de production local. Services de transitions, accès manipulés, checkout E2E, tests navigateur et couverture ≥60 % restent à faire. |
-| Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Déploiement et documentation de paiement restent à faire. |
+| Tests | Partiel | 17 tests unitaires, 20 tests PostgreSQL et contrôles HTTP panier/catalogue/auth/checkout passent en développement ; auth également vérifiée sur serveur de production local. Services de transitions, accès manipulés, tests navigateur et couverture ≥60 % restent à faire. |
+| Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Paiement simulé documenté ; déploiement à faire. |
 | Déploiement | À faire | Choisir hébergement après socle persistant validé. |
 | Bonus | À faire | Reporter après validation du MVP ; wishlist, avis acheteurs, PDF, Stripe test et emails réels prioritaires à évaluer. |
 
@@ -63,7 +63,7 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 1. **Terminé :** stabiliser Prisma/client, PostgreSQL local, schéma, migrations et seed reproductible.
 2. **Terminé :** catalogue branché sur BDD, fiche produit, recherche et filtres URL (A6 réservé au lot panier).
 3. **Terminé :** panier persistant, promotions serveur, authentification et fusion panier.
-4. Checkout invité transactionnel, tests concurrence/idempotence et emails simulés.
+4. **Terminé :** checkout invité transactionnel, tests concurrence/idempotence et emails simulés.
 5. Espace client puis back-office avec protections testées.
 6. Audit responsive/accessibilité/SEO/performance, documentation et déploiement ; bonus ensuite.
 
@@ -228,3 +228,11 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Confirmation protégée côté serveur, routes privées noindex. Compte facultatif après achat : preuve du reçu et email correspondant requis, transaction annulée si incompatibles.
 - Cache Prisma de développement renouvelé quand les modèles ou noms de colonnes générés changent : corrige le client ancien conservé par le serveur après migration. Un changement de type de colonne ou d’adaptateur nécessite toujours un redémarrage.
 - Parcours HTTP complet réussi : invité, relais/facturation, refus sans effets, origine hostile, ancien onglet, rejeu idempotent, confirmation privée, compte facultatif et adresse propriétaire.
+
+### 2026-10-07 — validation finale du checkout
+
+- `npm test` : **17 réussis** ; `npm run test:db` : **20 réussis**. Tests HTTP checkout, panier, authentification et catalogue réussis sur le serveur local. Les fixtures HTTP sont supprimées à la fin ; aucun reset de la base.
+- Lint et TypeScript réussis ; `npm run build -- --webpack` réussi, dont les trois routes checkout. `git diff --check` réussi. Aucune dépendance ajoutée.
+- README : cartes fictives, parcours, garanties, limites de preuve du reçu et reprise des emails documentés. Variable admin ajoutée uniquement au fichier exemple ; configuration locale existante conservée.
+- Restent : espace client complet et back-office ; audit navigateur responsive/zoom/clavier/lecteur d’écran, scores Lighthouse et couverture instrumentée. Aucun audit WCAG ni achat réel revendiqué.
+- Versionnement progressif : transaction backend, interface du tunnel, puis tests HTTP et documentation. Commits locaux, sans publication distante.

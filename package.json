@@ -9,7 +9,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "test": "tsx --test tests/*.test.mjs",
-    "test:db": "tsx --test tests/database.test.mts",
+    "test:db": "tsx --test --test-concurrency=1 tests/*database.test.mts",
     "setup": "node scripts/setup.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
@@ -18,7 +18,9 @@
     "test:catalog-http": "node scripts/verify-catalog-http.mjs",
     "bench:catalogue": "tsx scripts/benchmark-catalog.ts",
     "test:cart-http": "tsx scripts/verify-cart-http.mts",
-    "test:auth-http": "tsx scripts/verify-auth-http.mts"
+    "test:auth-http": "tsx scripts/verify-auth-http.mts",
+    "emails:simulate": "tsx scripts/simulate-emails.mts",
+    "test:checkout-http": "tsx scripts/verify-checkout-http.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -48,7 +48,7 @@ Les mots de passe sont hashés avec bcrypt (coût 12). Ces comptes existent en B
 
 Promotions : `BIENVENUE10` réduit le sous-total de 10 % ; `PORT0` offre les frais de port. Le port est gratuit à partir de 60 € **après remise**, pour les trois modes. Les montants sont en centimes entiers ; la TVA de 20 % dans les fixtures est une hypothèse de démonstration à valider selon les produits avant commercialisation.
 
-Les commandes fictives sont datées du 1er au 5 octobre 2026. Les stocks fournis représentent le stock disponible après cet historique ; relancer le seed ne rejoue pas les ventes. Les emails de confirmation sont stockés avec le statut `SIMULATED`, sans envoi réseau. Les cartes de paiement de démonstration seront documentées lors de l’implémentation du checkout.
+Les commandes fictives sont datées du 1er au 5 octobre 2026. Les stocks fournis représentent le stock disponible après cet historique ; relancer le seed ne rejoue pas les ventes. Les emails de confirmation sont stockés avec le statut `SIMULATED`, sans envoi réseau. Les cartes de paiement de démonstration sont décrites ci-dessous.
 
 ## Architecture et garanties actuelles
 
@@ -60,13 +60,13 @@ Les commandes fictives sont datées du 1er au 5 octobre 2026. Les stocks fournis
 - `prisma/seed.ts` : données fictives, relançables, insérées dans une transaction.
 - `tests/` : tests unitaires et intégration PostgreSQL. Les tests d’intégration utilisent des transactions annulées ou une fixture unique supprimée ; ils ne réinitialisent pas le catalogue.
 
-Le schéma prévoit des instantanés de commande, des clés d’idempotence uniques, des sessions expirables, des jetons de reset hashés, une outbox d’emails et des historiques de stock et de statut. **Le schéma anticipe plusieurs lots** : les sessions et la fusion du panier sont opérationnelles ; le checkout, le reset et les emails restent à réaliser.
+Le schéma prévoit des instantanés de commande, des clés d’idempotence uniques, des sessions expirables, des jetons de reset hashés, une outbox d’emails et des historiques de stock et de statut. **Le schéma anticipe plusieurs lots** : les sessions et la fusion du panier sont opérationnelles ; le checkout et les emails de commande simulés sont opérationnels ; le reset et les autres événements email restent à réaliser.
 
 Le CLI et le client Prisma sont alignés sur 7.10.0. La configuration CLI et l’adaptateur PostgreSQL suivent la [documentation officielle Prisma](https://www.prisma.io/docs/orm/v7/reference/prisma-config-reference). La génération du client et le build ne nécessitent pas de base démarrée : les pages publiques sont dynamiques. Leur consultation nécessite PostgreSQL démarré. Les erreurs de connexion affichent un état de reprise dans la boutique.
 
 ## État et limites
 
-L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant et authentification sont disponibles. Checkout, gestion des adresses/profil/commandes et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
+L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant et authentification sont disponibles. Le tunnel invité et compte est disponible. Gestion des adresses/profil/historique et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
 
 Le fichier [SUIVI_PROJET.md](SUIVI_PROJET.md) consigne les décisions, réalisations, preuves et simplifications. Les audits navigateur, WCAG, Lighthouse et couverture des services restent à réaliser. Le projet n’est pas prêt à recevoir de véritables achats.
 
@@ -84,7 +84,7 @@ Les fiches ont leurs métadonnées, URL canonique et Open Graph. Les variantes f
 
 Les tests HTTP vérifient le HTML et les statuts, pas les interactions dans un navigateur. Le benchmark mesure le service PostgreSQL local après échauffement ; il ne mesure pas Lighthouse ni le temps de rendu utilisateur.
 
-Le panier invité est maintenant disponible sur `/panier` : ajout depuis une fiche, quantités, suppression, badge et codes BIENVENUE10 / PORT0. Le cookie privé persiste 30 jours ; les prix et stocks restent vérifiés côté serveur. Port standard offert dès 60 € après remise. La connexion fusionne ce panier avec le panier du compte. Le paiement reste pour le prochain lot.
+Le panier invité est maintenant disponible sur `/panier` : ajout depuis une fiche, quantités, suppression, badge et codes BIENVENUE10 / PORT0. Le cookie privé persiste 30 jours ; les prix et stocks restent vérifiés côté serveur. Port standard offert dès 60 € après remise. La connexion fusionne ce panier avec le panier du compte. Le paiement simulé est disponible depuis le panier.
 
 Contrôle du parcours panier : `npm run test:cart-http` (serveur local sur 127.0.0.1:3000 et base de démonstration nécessaires). Le test nettoie son panier en fin d’exécution. Dans les environnements où Turbopack ne peut pas ouvrir son port interne, `npm run dev -- --webpack` et `npm run build -- --webpack` permettent de vérifier le projet avec Webpack.
 
@@ -96,6 +96,34 @@ Contrôle du parcours panier : `npm run test:cart-http` (serveur local sur 127.0
 - Limitation PostgreSQL : 10 tentatives par email / 15 minutes et plafond global de 200 / 15 minutes. Les tentatives réussies comptent aussi. Pour une exploitation publique, compléter avec protection réseau et limites par IP provenant d’un proxy de confiance, puis planifier le nettoyage des données expirées.
 - `npm run test:auth-http` : formulaires POST, cookies, accès protégé, origine hostile, propriétaire de panier manipulé, fusion, révocation et expiration. Serveur local sur `127.0.0.1:3000` et base de démonstration requis ; comptes/paniers de test nettoyés.
 
-Cette étape livre l’authentification et un accueil de compte. Adresses, modification de profil, historique/factures, email de bienvenue, vérification email et récupération de mot de passe restent explicitement à réaliser. La commande invité reste prévue dans le tunnel de commande.
+Cette étape livre l’authentification et un accueil de compte. Adresses, modification de profil, historique/factures, email de bienvenue, vérification email et récupération de mot de passe restent explicitement à réaliser. La commande invité est disponible sans création de compte.
 
 La validation auth HTTP peut aussi cibler `npm run start` après build avec `AUTH_HTTP_PRODUCTION=true npm run test:auth-http` : elle exige alors Secure sur les cookies et private/no-store sur le compte. Le test utilise un jar manuel en HTTP local ; il ne vérifie pas TLS ni la politique cookie d’un navigateur.
+
+## Commander et simuler un paiement
+
+Ajouter un produit au panier puis choisir « Commander » : livraison, paiement, confirmation. France uniquement ; standard 5,90 €, relais 4,90 €, express 9,90 €, gratuit dès 60 € après remise. Les deux relais sont fictifs. Une adresse de facturation distincte est facultative ; un client connecté peut sélectionner son adresse enregistrée.
+
+| Marque | Numéro fictif accepté | Résultat |
+|---|---|---|
+| CB | 4000000000000077 | Réussite |
+| Visa | 4242424242424242 | Réussite |
+| Mastercard | 5555555555554444 | Réussite |
+| Visa | 4000000000000002 | Refus sans commande |
+
+Utiliser une expiration future au format MM/AAAA (ex. 12/2035), le CVC **123**, et cocher la confirmation de simulation. Seules ces fixtures sont acceptées ; aucune donnée de carte n’est conservée. Aucun débit ni livraison réelle.
+
+Le brouillon expire après une heure. Un changement de prix, contenu ou promo demande de reprendre la livraison. Paiement, stock, consommation promo, instantanés, historique, emails et panier vidé sont validés dans une même transaction. Un rejeu du paiement retourne la même commande. Les références suivent ART-AAAAMMJJ-séquence, avec jour Europe/Paris.
+
+La référence seule ne donne pas accès à la confirmation. L’invité utilise un cookie privé de reçu valable 30 jours pour sa dernière commande ; le client connecté doit en être propriétaire. Après achat, création ou connexion facultative au compte avec le même email et la preuve du reçu. Les commandes plus anciennes seront accessibles via l’historique client à réaliser.
+
+Deux emails (client et admin) sont enregistrés dans la transaction puis marqués SIMULATED, sans envoi externe. `ADMIN_NOTIFICATION_EMAIL` configure le destinataire admin, par défaut admin@artisanova.test. Si la simulation échoue après commit, relancer `npm run emails:simulate` sur la base locale de démonstration : seules les entrées PENDING sont traitées. Nettoyage des brouillons expirés à planifier au déploiement.
+
+```sh
+npm run test:cart-http
+npm run test:auth-http
+npm run test:checkout-http # serveur sur 127.0.0.1:3000 ; fixtures nettoyées
+npm run emails:simulate   # simulation locale, aucun email envoyé
+```
+
+Les tests HTTP soumettent les formulaires natifs et vérifient les protections et effets en base ; ils ne remplacent pas l’audit interactif mobile/clavier. En développement, le cache Prisma se renouvelle après changement des modèles ou noms de colonnes générés ; redémarrer Next après changement de type de colonne ou d’adaptateur.
