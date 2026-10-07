@@ -60,10 +60,10 @@ Les commandes fictives sont datées du 1er au 5 octobre 2026. Les stocks fournis
 
 Le schéma prévoit des instantanés de commande, des clés d’idempotence uniques, des sessions expirables, des jetons de reset hashés, une outbox d’emails et des historiques de stock et de statut. **Les services qui exploitent ces mécanismes restent à implémenter** : la présence des tables ne signifie pas qu’un checkout ou une authentification sont opérationnels.
 
-Le CLI et le client Prisma sont alignés sur 7.10.0. La configuration CLI et l’adaptateur PostgreSQL suivent la [documentation officielle Prisma](https://www.prisma.io/docs/orm/v7/reference/prisma-config-reference). La génération du client et la construction de l’accueil ne nécessitent pas de base démarrée.
+Le CLI et le client Prisma sont alignés sur 7.10.0. La configuration CLI et l’adaptateur PostgreSQL suivent la [documentation officielle Prisma](https://www.prisma.io/docs/orm/v7/reference/prisma-config-reference). La génération du client et le build ne nécessitent pas de base démarrée : les pages publiques sont dynamiques. Leur consultation nécessite PostgreSQL démarré. Les erreurs de connexion affichent un état de reprise dans la boutique.
 
 ## État et limites
 
-L’accueil et le socle de données sont le point de départ. Catalogue interactif, panier persistant, comptes, checkout et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
+L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant, comptes, checkout et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
 
 Le fichier [SUIVI_PROJET.md](SUIVI_PROJET.md) consigne les décisions, réalisations, preuves et simplifications. Les audits navigateur, WCAG, Lighthouse et couverture des services restent à réaliser. Le projet n’est pas prêt à recevoir de véritables achats.

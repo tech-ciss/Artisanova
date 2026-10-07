@@ -25,8 +25,9 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 
 | Exigences | État | Livré / reste à faire |
 |---|---|---|
-| A1 accueil | Partiel | Identité, bannière, cinq univers, histoire. Produits vedettes pilotés en BDD à faire. |
-| A2–A6 catalogue | À faire | Seed ~25 produits, pagination 12, filtres URL, recherche normalisée, fiches, galerie et stock. |
+| A1 accueil | Fait | Accueil, catégories actives et jusqu’à six coups de cœur sélectionnés via isFeatured en BDD (cinq dans le seed). Leur édition via le back-office reste en E1. |
+| A2–A5 catalogue | Fait | Catalogue PostgreSQL, pagination 12, tris, filtres combinés partageables, prix avec curseur, recherche normalisée, galerie, artisan, stock et similaires. Mesures de performance et audit navigateur détaillés dans le journal. |
+| A6 ajout au panier | À faire | Sélection de quantité et ajout avec vérification de stock dans le prochain lot panier. |
 | B1–B2 panier | À faire | Persistance invité, fusion serveur à connexion, badge global, modification avec contrôle stock. |
 | B3–B4 calcul et promotion | Partiel | Service testé : sous-total, tarifs, seuil, pourcentage, montant, port offert, validité promo. Lecture BDD, UI et consommation atomique promo à faire. |
 | C1–C5 compte | À faire | Hash, cookies httpOnly, adresses, profil, commandes isolées et facture. |
@@ -129,3 +130,14 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Publication et catégorie non archivée imposées aux listes, coups de cœur, fiches et similaires. Relations chargées par lots ; aucune requête par carte produit.
 - `npm test` : 11 tests réussis. `npm run test:db` : 12 tests réussis, avec fixtures brouillon/catégorie archivée testées via les vrais services puis supprimées. Contrôle TypeScript corrigé après adaptation des transformations Zod.
 - Décision : le catalogue, la galerie et les fiches constituent ce lot. A6 (quantité et ajout au panier) reste pour le lot panier ; aucune simulation d’ajout présentée comme une commande réelle.
+
+### 2026-10-07 — interface du catalogue
+
+- Groupe `(shop)` avec en-tête/pied de page communs ; accueil branché sur les catégories actives et coups de cœur de la BDD.
+- `/catalogue` : formulaire GET utilisable sans JavaScript pour les champs numériques, catégories, recherche, tri et disponibilité ; contrôle de budget client uniquement pour synchroniser le curseur et son champ numérique. Un filtre appliqué remet la pagination à la page 1.
+- Erreurs françaises au niveau des champs et résumé, absence de résultats explicite, pagination conservant tous les filtres. Deux colonnes mobile, trois puis quatre selon contexte ; contrôles à cible d’au moins 44 px.
+- `/produits/[slug]` : galerie interactive, prix TTC, description en texte (aucun HTML utilisateur injecté), catégorie, artisan, stock et jusqu’à quatre similaires.
+- Loading du catalogue limité à son segment : une frontière Suspense globale envoyait HTTP 200 avant qu’une fiche inexistante soit détectée. Le déplacement préserve les vrais 404 des fiches testées.
+- Fiches : métadonnées par produit avec React cache pour partager la lecture entre metadata et page. `next/image`, propriétés sizes et preload pour la galerie selon la documentation Next installée. SVG locaux servis sans transformation bitmap ; images Unsplash autorisées par hostname uniquement.
+- `AGENTS.md` et `CLAUDE.md` ont été générés par Next dev ; conservés pour rappeler la consultation de la documentation de la version installée.
+- Audit visuel, interactions galerie/curseur dans un navigateur, lecteurs d’écran et Lighthouse restent à réaliser : aucun navigateur pilotable disponible dans cette session. Contrôles HTTP en cours.
