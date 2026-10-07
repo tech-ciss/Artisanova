@@ -256,6 +256,12 @@ test("auth : inscription client, rotation, fusion concurrente et jeton invité c
     await mutateCart(db, { userId: user.id }, { operation: "add", productId: "demo-product-1-1", quantity: 4 });
     await mutateCart(db, guestHash, { operation: "add", productId: "demo-product-1-1", quantity: 5 });
     await mutateCart(db, guestHash, { operation: "promo", code: "BIENVENUE10" });
+    const account = await db.cart.findUniqueOrThrow({ where: { userId: user.id } });
+    await db.cartItem.update({ where: { cartId_productId: { cartId: account.id, productId: "demo-product-1-1" } }, data: { quantity: 995 } });
+    await assert.rejects(authenticate(db, { email, password }, guestHash), /Les deux paniers dépassent/);
+    assert.equal((await readCart(db, guestHash)).count, 5);
+    assert.equal(await db.session.count({ where: { userId: user.id } }), 1);
+    await db.cartItem.update({ where: { cartId_productId: { cartId: account.id, productId: "demo-product-1-1" } }, data: { quantity: 4 } });
     const sessions = await Promise.all([1, 2].map(() => authenticate(db, { email, password }, guestHash, first.token)));
     assert.equal(sessions.filter(session => session.merged).length, 1);
     assert.equal(await resolveSession(db, first.token), null);
@@ -278,11 +284,12 @@ test("auth : inscription client, rotation, fusion concurrente et jeton invité c
 });
 
 test("auth : limitation des tentatives atomique et réinitialisation de la fenêtre", async () => {
-  const { consumeAuthAttempt, throttleKey } = await import("../src/lib/services/auth.service");
+  const { consumeAuthAttempt, authenticate, throttleKey } = await import("../src/lib/services/auth.service");
   const email = `throttle-${randomUUID()}@example.test`;
   try {
     const allowed = await Promise.all(Array.from({ length: 12 }, () => consumeAuthAttempt(db, email)));
     assert.equal(allowed.filter(Boolean).length, 10);
+    await assert.rejects(authenticate(db, { email, password: "Any-Password-42" }, null), /Trop de tentatives/);
     await db.authThrottle.update({ where: { key: throttleKey(email) }, data: { resetsAt: new Date(0) } });
     assert.equal(await consumeAuthAttempt(db, email), true);
     assert.equal((await db.authThrottle.findUniqueOrThrow({ where: { key: throttleKey(email) } })).attempts, 1);

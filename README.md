@@ -44,7 +44,7 @@ Le seed comprend 1 admin, 3 clients, 5 catégories, 5 artisans fictifs, 25 produ
 | Client | sam@artisanova.test | Artisanova123! |
 | Client | lou@artisanova.test | Artisanova123! |
 
-Les mots de passe sont hashés avec bcrypt (coût 12). Ces comptes existent en BDD ; **l’interface de connexion reste à implémenter**. Le seed refuse l’exécution en production, sans `SEED_DEMO=true`, ou sur une URL qui ne vise pas une base `artisanova` locale. Ne jamais peupler une base de production avec ces comptes publics.
+Les mots de passe sont hashés avec bcrypt (coût 12). Ces comptes existent en BDD ; ils sont utilisables sur `/connexion`. Le seed refuse l’exécution en production, sans `SEED_DEMO=true`, ou sur une URL qui ne vise pas une base `artisanova` locale. Ne jamais peupler une base de production avec ces comptes publics.
 
 Promotions : `BIENVENUE10` réduit le sous-total de 10 % ; `PORT0` offre les frais de port. Le port est gratuit à partir de 60 € **après remise**, pour les trois modes. Les montants sont en centimes entiers ; la TVA de 20 % dans les fixtures est une hypothèse de démonstration à valider selon les produits avant commercialisation.
 
@@ -60,13 +60,13 @@ Les commandes fictives sont datées du 1er au 5 octobre 2026. Les stocks fournis
 - `prisma/seed.ts` : données fictives, relançables, insérées dans une transaction.
 - `tests/` : tests unitaires et intégration PostgreSQL. Les tests d’intégration utilisent des transactions annulées ou une fixture unique supprimée ; ils ne réinitialisent pas le catalogue.
 
-Le schéma prévoit des instantanés de commande, des clés d’idempotence uniques, des sessions expirables, des jetons de reset hashés, une outbox d’emails et des historiques de stock et de statut. **Les services qui exploitent ces mécanismes restent à implémenter** : la présence des tables ne signifie pas qu’un checkout ou une authentification sont opérationnels.
+Le schéma prévoit des instantanés de commande, des clés d’idempotence uniques, des sessions expirables, des jetons de reset hashés, une outbox d’emails et des historiques de stock et de statut. **Le schéma anticipe plusieurs lots** : les sessions et la fusion du panier sont opérationnelles ; le checkout, le reset et les emails restent à réaliser.
 
 Le CLI et le client Prisma sont alignés sur 7.10.0. La configuration CLI et l’adaptateur PostgreSQL suivent la [documentation officielle Prisma](https://www.prisma.io/docs/orm/v7/reference/prisma-config-reference). La génération du client et le build ne nécessitent pas de base démarrée : les pages publiques sont dynamiques. Leur consultation nécessite PostgreSQL démarré. Les erreurs de connexion affichent un état de reprise dans la boutique.
 
 ## État et limites
 
-L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant, comptes, checkout et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
+L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant et authentification sont disponibles. Checkout, gestion des adresses/profil/commandes et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
 
 Le fichier [SUIVI_PROJET.md](SUIVI_PROJET.md) consigne les décisions, réalisations, preuves et simplifications. Les audits navigateur, WCAG, Lighthouse et couverture des services restent à réaliser. Le projet n’est pas prêt à recevoir de véritables achats.
 
@@ -84,6 +84,18 @@ Les fiches ont leurs métadonnées, URL canonique et Open Graph. Les variantes f
 
 Les tests HTTP vérifient le HTML et les statuts, pas les interactions dans un navigateur. Le benchmark mesure le service PostgreSQL local après échauffement ; il ne mesure pas Lighthouse ni le temps de rendu utilisateur.
 
-Le panier invité est maintenant disponible sur `/panier` : ajout depuis une fiche, quantités, suppression, badge et codes BIENVENUE10 / PORT0. Le cookie privé persiste 30 jours ; les prix et stocks restent vérifiés côté serveur. Port standard offert dès 60 € après remise. L’authentification, la fusion du panier et le paiement sont les prochaines étapes.
+Le panier invité est maintenant disponible sur `/panier` : ajout depuis une fiche, quantités, suppression, badge et codes BIENVENUE10 / PORT0. Le cookie privé persiste 30 jours ; les prix et stocks restent vérifiés côté serveur. Port standard offert dès 60 € après remise. La connexion fusionne ce panier avec le panier du compte. Le paiement reste pour le prochain lot.
 
 Contrôle du parcours panier : `npm run test:cart-http` (serveur local sur 127.0.0.1:3000 et base de démonstration nécessaires). Le test nettoie son panier en fin d’exécution. Dans les environnements où Turbopack ne peut pas ouvrir son port interne, `npm run dev -- --webpack` et `npm run build -- --webpack` permettent de vérifier le projet avec Webpack.
+
+## Authentification et panier du compte
+
+- `/inscription` : prénom, nom, email normalisé et unique, mot de passe confirmé. Minimum 8 caractères, une majuscule et un chiffre ; limite de 72 octets pour bcrypt, sans suppression des espaces.
+- `/connexion` et `/compte` : session privée expirant après 30 jours. Déconnexion par POST avec révocation en base. Cookie Secure en production : le site doit être servi en HTTPS.
+- Fusion à inscription/connexion : quantités additionnées, code invité prioritaire, aucune suppression silencieuse en cas de rupture. L’ancien panier invité est marqué consommé. Le panier du compte est conservé après déconnexion.
+- Limitation PostgreSQL : 10 tentatives par email / 15 minutes et plafond global de 200 / 15 minutes. Les tentatives réussies comptent aussi. Pour une exploitation publique, compléter avec protection réseau et limites par IP provenant d’un proxy de confiance, puis planifier le nettoyage des données expirées.
+- `npm run test:auth-http` : formulaires POST, cookies, accès protégé, origine hostile, propriétaire de panier manipulé, fusion, révocation et expiration. Serveur local sur `127.0.0.1:3000` et base de démonstration requis ; comptes/paniers de test nettoyés.
+
+Cette étape livre l’authentification et un accueil de compte. Adresses, modification de profil, historique/factures, email de bienvenue, vérification email et récupération de mot de passe restent explicitement à réaliser. La commande invité reste prévue dans le tunnel de commande.
+
+La validation auth HTTP peut aussi cibler `npm run start` après build avec `AUTH_HTTP_PRODUCTION=true npm run test:auth-http` : elle exige alors Secure sur les cookies et private/no-store sur le compte. Le test utilise un jar manuel en HTTP local ; il ne vérifie pas TLS ni la politique cookie d’un navigateur.

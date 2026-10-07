@@ -28,17 +28,18 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | A1 accueil | Fait | Accueil, catégories actives et jusqu’à six coups de cœur sélectionnés via isFeatured en BDD (cinq dans le seed). Leur édition via le back-office reste en E1. |
 | A2–A5 catalogue | Fait | Catalogue PostgreSQL, pagination 12, tris, filtres combinés partageables, prix avec curseur, recherche normalisée, galerie, artisan, stock et similaires. Mesures de performance et audit navigateur détaillés dans le journal. |
 | A6 ajout au panier | Fait | Quantité et ajout depuis la fiche, stock validé côté serveur, confirmation et lien vers le panier. |
-| B1–B2 panier | Partiel | Panier invité serveur, badge global, quantités et suppression réalisés ; fusion à la connexion attend l’authentification. |
+| B1–B2 panier | Fait | Panier invité/compte, badge global, quantités, suppression, fusion transactionnelle à inscription/connexion et persistance après déconnexion. |
 | B3–B4 calcul et promotion | Partiel | Récapitulatif et code unique validé en BDD réalisés ; consommation atomique lors de la commande à venir. |
-| C1–C5 compte | À faire | Hash, cookies httpOnly, adresses, profil, commandes isolées et facture. |
+| C1–C2 authentification | Partiel | Inscription, connexion, déconnexion, session expirante et panier compte réalisés/testés ; commande invité reste dans D. |
+| C3–C5 espace client | À faire | Adresses, profil, historique de commandes et facture ; page compte minimale présente. |
 | D1–D5 checkout | À faire | Invité et compte, adresse, paiement, transaction stock, confirmation, référence atomique. |
 | E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
 | F emails | À faire | Outbox en BDD ; événements inscription, commande, expédition, reset, admin. |
 | BDD / seed / migrations | Fait | Schéma PostgreSQL complet, migration versionnée et appliquée ; 1 admin +3 clients hashés, 5 artisans et catégories, 25 produits illustrés, 2 promotions, 10 commandes, adresses et emails simulés. Relance sans duplication vérifiée. |
-| UI/UX | Partiel | Catalogue mobile-first, champs associés aux labels, erreurs de filtres, pagination, état vide, chargement et reprise après erreur. Formulaires mutatifs et audit navigateur restent à faire. |
+| UI/UX | Partiel | Catalogue mobile-first, champs associés aux labels, erreurs de filtres, pagination, état vide, chargement et reprise après erreur. Formulaires panier/authentification livrés ; audit navigateur et autres modules restent à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
 | Performance / SEO | Partiel | Métadonnées produit/OG/canoniques, next/image, sitemap des produits publics et robots. Recherche locale mesurée ; Lighthouse ≥85 et aperçu social réel restent à vérifier. |
-| Tests | Partiel | 11 tests unitaires, 12 tests PostgreSQL et contrôles HTTP passent. Services de transitions, accès manipulés, checkout E2E, tests navigateur et couverture ≥60 % restent à faire. |
+| Tests | Partiel | 14 tests unitaires, 16 tests PostgreSQL et contrôles HTTP panier/catalogue/auth passent en développement ; auth également vérifiée sur serveur de production local. Services de transitions, accès manipulés, checkout E2E, tests navigateur et couverture ≥60 % restent à faire. |
 | Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Déploiement et documentation de paiement restent à faire. |
 | Déploiement | À faire | Choisir hébergement après socle persistant validé. |
 | Bonus | À faire | Reporter après validation du MVP ; wishlist, avis acheteurs, PDF, Stripe test et emails réels prioritaires à évaluer. |
@@ -61,7 +62,7 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 
 1. **Terminé :** stabiliser Prisma/client, PostgreSQL local, schéma, migrations et seed reproductible.
 2. **Terminé :** catalogue branché sur BDD, fiche produit, recherche et filtres URL (A6 réservé au lot panier).
-3. Panier persistant et promotions validées serveur, puis auth et fusion panier.
+3. **Terminé :** panier persistant, promotions serveur, authentification et fusion panier.
 4. Checkout invité transactionnel, tests concurrence/idempotence et emails simulés.
 5. Espace client puis back-office avec protections testées.
 6. Audit responsive/accessibilité/SEO/performance, documentation et déploiement ; bonus ensuite.
@@ -195,3 +196,14 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Connexion/inscription redirigent vers le panier si des articles ont été fusionnés ; message de vérification des quantités. Déconnexion POST avec révocation puis notification. Aucun paramètre de redirection externe accepté.
 - Compte minimal : identité et lien panier, sans liens vers des fonctionnalités absentes. Adresses, profil, historique/factures restent pour le lot espace client ; commande invité toujours prévue au checkout.
 - robots/noindex complétés pour les routes de compte et panier. Les autorisations restent côté serveur et ne dépendent jamais de robots.txt.
+
+### 2026-10-07 — validation finale de l’authentification
+
+- `npm test` : **14 réussis** ; `npm run test:db` : **16 réussis**. Fusion hors limites testée avec rollback : paniers conservés et aucune nouvelle session. Connexion réellement refusée une fois la limite d’email dépassée.
+- `npm run test:auth-http` réussi en développement, puis `AUTH_HTTP_PRODUCTION=true npm run test:auth-http` réussi sur `next start` local. Vérifie : inscription et rôle CLIENT non injectable, champs invalides, absence de mot de passe dans le HTML, cookie privé, accès /compte protégé, propriétaire de panier client ignoré, fusion, déconnexion, rejeu d’un cookie révoqué et expiration.
+- POST d’origine hostile : rejeté par Next avant création de compte (HTTP 500 attendu dans cette version). Journaux de rejet lors du test intentionnel.
+- Production : attribut Secure des cookies et `Cache-Control` privé/no-store de la page compte contrôlés. Le jar du test envoie les cookies manuellement sur HTTP local ; ce test contrôle les attributs serveur, **pas** un transport HTTPS ni le comportement Secure d’un navigateur. HTTPS obligatoire au déploiement.
+- `npm run test:cart-http` et `npm run test:catalog-http` réussis après intégration de l’authentification, dont les 404. Lint sans avertissement et TypeScript réussis ; compilation de production avec `npm run build -- --webpack` réussie.
+- Pendant le développement : une erreur JSON transitoire du serveur Next a disparu après redémarrage ; le parcours final est repassé. Fixture d’expiration corrigée pour respecter la contrainte expiresAt > createdAt, sans modifier les contraintes métier.
+- Ajustements UX : messages de limite de mot de passe lisibles sans jargon de stockage, champs non secrets conservés, noms/emails longs autorisés à se répartir sur plusieurs lignes. Audit navigateur mobile/zoom/clavier/lecteur d’écran et Lighthouse encore non réalisés.
+- Aucune dépendance nouvelle ni publication distante. Serveurs temporaires arrêtés ; comptes/paniers HTTP de test supprimés.
