@@ -32,6 +32,7 @@ export async function mutateCart(db: PrismaClient, sessionId: string, input: z.i
   if (!parsed.success) throw new CartError("Vérifiez la quantité ou le code renseigné.");
   input = parsed.data;
   return db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${sessionId}, 0))::text`;
     const cart = await tx.cart.upsert({ where: { sessionId }, create: { sessionId }, update: {} });
     // Serialize mutations across tabs; never trust a cart ID supplied by a visitor.
     await tx.$queryRaw`SELECT id FROM carts WHERE id = ${cart.id} FOR UPDATE`;

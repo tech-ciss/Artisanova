@@ -83,3 +83,5 @@ Les filtres GET et la saisie numérique du budget fonctionnent sans JavaScript ;
 Les fiches ont leurs métadonnées, URL canonique et Open Graph. Les variantes filtrées du catalogue sont `noindex, follow`. Le sitemap ne contient que les fiches publiées de catégories actives. **Configurer NEXT_PUBLIC_APP_URL avec l’origine réelle avant déploiement**. robots.txt est une indication aux robots, pas un contrôle d’accès ; les futurs espaces privés devront être protégés côté serveur.
 
 Les tests HTTP vérifient le HTML et les statuts, pas les interactions dans un navigateur. Le benchmark mesure le service PostgreSQL local après échauffement ; il ne mesure pas Lighthouse ni le temps de rendu utilisateur.
+
+Le panier invité est maintenant disponible sur `/panier` : ajout depuis une fiche, quantités, suppression, badge et codes BIENVENUE10 / PORT0. Le cookie privé persiste 30 jours ; les prix et stocks restent vérifiés côté serveur. Port standard offert dès 60 € après remise. L’authentification, la fusion du panier et le paiement sont les prochaines étapes.

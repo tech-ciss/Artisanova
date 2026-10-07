@@ -27,9 +27,9 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 |---|---|---|
 | A1 accueil | Fait | Accueil, catégories actives et jusqu’à six coups de cœur sélectionnés via isFeatured en BDD (cinq dans le seed). Leur édition via le back-office reste en E1. |
 | A2–A5 catalogue | Fait | Catalogue PostgreSQL, pagination 12, tris, filtres combinés partageables, prix avec curseur, recherche normalisée, galerie, artisan, stock et similaires. Mesures de performance et audit navigateur détaillés dans le journal. |
-| A6 ajout au panier | À faire | Sélection de quantité et ajout avec vérification de stock dans le prochain lot panier. |
-| B1–B2 panier | À faire | Persistance invité, fusion serveur à connexion, badge global, modification avec contrôle stock. |
-| B3–B4 calcul et promotion | Partiel | Service testé : sous-total, tarifs, seuil, pourcentage, montant, port offert, validité promo. Lecture BDD, UI et consommation atomique promo à faire. |
+| A6 ajout au panier | Fait | Quantité et ajout depuis la fiche, stock validé côté serveur, confirmation et lien vers le panier. |
+| B1–B2 panier | Partiel | Panier invité serveur, badge global, quantités et suppression réalisés ; fusion à la connexion attend l’authentification. |
+| B3–B4 calcul et promotion | Partiel | Récapitulatif et code unique validé en BDD réalisés ; consommation atomique lors de la commande à venir. |
 | C1–C5 compte | À faire | Hash, cookies httpOnly, adresses, profil, commandes isolées et facture. |
 | D1–D5 checkout | À faire | Invité et compte, adresse, paiement, transaction stock, confirmation, référence atomique. |
 | E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
@@ -163,3 +163,9 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Mutations transactionnelles et verrou de ligne du panier pour les onglets concurrents. Aucun stock réservé par le panier. Un seul code ; validité relue au calcul, sans consommer ses utilisations avant une future commande.
 - Lignes devenues indisponibles conservées et signalées, exclues du total. Promo devenue invalide signalée et remise retirée du calcul.
 - Fusion avec panier compte différée à l’authentification : aucun compte ni connexion simulés. Nettoyage planifié des paniers abandonnés à ajouter avant exploitation ; expiration du cookie ne supprime pas les lignes en base.
+
+### 2026-10-07 — interface panier
+
+- Page /panier, lien et badge communs, formulaire quantité/ajout sur fiche, modification et suppression, état vide, récapitulatif TTC et code promo. Server Actions POST avec contrôle Origin Next, erreurs publiques françaises et états pending/status accessibles.
+- Présentation mobile en une colonne, récapitulatif latéral à partir de 800 px. Aucun bouton de paiement inactif présenté comme fonctionnel.
+- Test concurrent a révélé une course lors de la première création Prisma : verrou consultatif transactionnel sur le hash de session avant upsert, puis verrou de ligne. Conversion du résultat void en texte pour la compatibilité Prisma.
