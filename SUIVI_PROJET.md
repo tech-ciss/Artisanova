@@ -220,3 +220,11 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Confirmation invitée : cookie privé distinct valable 30 jours, hash et expiration en commande ; référence seule insuffisante. Cookie de reçu pour la dernière commande invitée du navigateur. Confirmation compte : propriétaire obligatoire. Création/connexion facultative après achat avec preuve du reçu ET email correspondant ; aucune récupération de commandes par email seul.
 - 17 tests unitaires et 20 tests PostgreSQL réussis : dernier stock, dernière promo entre deux produits distincts, double paiement, instantanés, session étrangère, expiration, montant manipulé et ancien onglet. Tests DB exécutés par fichiers successifs pour éviter que les fixtures publiées ne perturbent les assertions du catalogue.
 - Corrections de fixtures pendant le développement : identifiant de catégorie et code promo limité à 40 caractères ; les fixtures interrompues identifiées ont été nettoyées. Aucune suppression ni décrément des produits du seed.
+
+### 2026-10-07 — interface du tunnel invité et compte
+
+- Livraison → paiement → confirmation, sans connexion obligatoire. Adresses enregistrées relues avec leur propriétaire ; facturation distincte facultative. Relais Nantes/Paris fictifs, France uniquement, validation de format sans vérification postale externe.
+- Formulaires avec labels, erreurs associées, focus sur le champ invalide, états d’attente et récapitulatif avant paiement. Mise en page mobile-first ; audit visuel/clavier en navigateur encore à réaliser.
+- Confirmation protégée côté serveur, routes privées noindex. Compte facultatif après achat : preuve du reçu et email correspondant requis, transaction annulée si incompatibles.
+- Cache Prisma de développement renouvelé quand les modèles ou noms de colonnes générés changent : corrige le client ancien conservé par le serveur après migration. Un changement de type de colonne ou d’adaptateur nécessite toujours un redémarrage.
+- Parcours HTTP complet réussi : invité, relais/facturation, refus sans effets, origine hostile, ancien onglet, rejeu idempotent, confirmation privée, compte facultatif et adresse propriétaire.
