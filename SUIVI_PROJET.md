@@ -169,3 +169,11 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Page /panier, lien et badge communs, formulaire quantité/ajout sur fiche, modification et suppression, état vide, récapitulatif TTC et code promo. Server Actions POST avec contrôle Origin Next, erreurs publiques françaises et états pending/status accessibles.
 - Présentation mobile en une colonne, récapitulatif latéral à partir de 800 px. Aucun bouton de paiement inactif présenté comme fonctionnel.
 - Test concurrent a révélé une course lors de la première création Prisma : verrou consultatif transactionnel sur le hash de session avant upsert, puis verrou de ligne. Conversion du résultat void en texte pour la compatibilité Prisma.
+
+### 2026-10-07 — vérification du panier
+
+- `npm test` : 11 tests réussis ; `npm run test:db` : 14 réussis. Nouveaux scénarios : isolation, persistance, mutations concurrentes, rupture, prix actualisé, promo expirée, suppression et panier vide sans frais. Fixtures supprimées ou transactions annulées.
+- `npm run test:cart-http` : réussi sur Next dev Webpack. Formulaires HTML POST réels sans navigateur : cookie HttpOnly/SameSite, ajout, badge, isolation, quantité modifiée/refusée, code invalide/valide, total et suppression. Nettoyage du panier de test.
+- `npm run test:catalog-http` : réussi, dont les vrais HTTP 404 avec agent standard ; le badge asynchrone n’a pas réintroduit les soft 404.
+- Lint et TypeScript vérifiés. `npm run build -- --webpack` réussi. Turbopack a échoué sur un port interne EPERM, y compris après relance avec autorisation ; Webpack fournit une compilation de production validée. Aucun changement global de bundler imposé.
+- Contrôles visuels mobile/zoom, navigation clavier, lecteur d’écran et Lighthouse toujours à effectuer dans un navigateur. Les retours `role=status`, labels et cibles 44 px sont implémentés ; pas de certification WCAG revendiquée.

@@ -217,3 +217,22 @@ test("panier : persistance, isolation, stock, promo et ajouts concurrents", asyn
     assert.equal((await readCart(db, sessionId)).totals.totalCents, 0);
   } finally { await db.cart.deleteMany({ where: { sessionId: { in: [sessionId, other] } } }); }
 });
+
+test("panier : prix actualisé, rupture et promotion expirée signalés", async () => {
+  const { readCart } = await import("../src/lib/services/persistent-cart.service");
+  await inRollback(async tx => {
+    const sessionId = `test-cart-${randomUUID()}`;
+    const cart = await tx.cart.create({ data: { sessionId, promoCode: "BIENVENUE10", items: { create: { productId: "demo-product-1-1", quantity: 1 } } } });
+    await tx.product.update({ where: { id: "demo-product-1-1" }, data: { priceCents: 2700 } });
+    assert.equal((await readCart(tx, sessionId)).totals.subtotalCents, 2700);
+    await tx.promoCode.update({ where: { code: "BIENVENUE10" }, data: { expiresAt: new Date(0) } });
+    let view = await readCart(tx, sessionId);
+    assert.ok(view.promotionError);
+    assert.equal(view.totals.discountCents, 0);
+    await tx.product.update({ where: { id: "demo-product-1-1" }, data: { stock: 0 } });
+    view = await readCart(tx, sessionId);
+    assert.equal(view.items[0].available, false);
+    assert.equal(view.totals.totalCents, 0);
+    assert.equal(await tx.cartItem.count({ where: { cartId: cart.id } }), 1);
+  });
+});

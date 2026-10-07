@@ -12,7 +12,7 @@ export const cartInput = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("promo"), code: z.string().trim().toUpperCase().max(40) }),
 ]);
 const include = { items: { orderBy: { id: "asc" as const }, include: { product: { include: { category: true } } } } };
-export async function readCart(db: PrismaClient, sessionId: string | null) {
+export async function readCart(db: Pick<PrismaClient, "cart" | "promoCode">, sessionId: string | null) {
   const cart = sessionId ? await db.cart.findUnique({ where: { sessionId }, include }) : null;
   const items = (cart?.items ?? []).map(item => ({ ...item, available: item.product.status === "PUBLISHED" && !item.product.category.isArchived && item.quantity <= item.product.stock }));
   const lines = items.filter(item => item.available).map(item => ({ productId: item.productId, unitPriceCents: item.product.priceCents, quantity: item.quantity, stock: item.product.stock }));

@@ -16,7 +16,8 @@
     "db:seed": "prisma db seed",
     "db:status": "prisma migrate status",
     "test:catalog-http": "node scripts/verify-catalog-http.mjs",
-    "bench:catalogue": "tsx scripts/benchmark-catalog.ts"
+    "bench:catalogue": "tsx scripts/benchmark-catalog.ts",
+    "test:cart-http": "tsx scripts/verify-cart-http.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

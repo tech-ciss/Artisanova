@@ -78,10 +78,12 @@ Exemple partageable : `/catalogue?q=gr%C3%A8s&category=ceramiques&min=25&max=60&
 
 Les prix de l’URL sont en euros, convertis et validés côté serveur en centimes. La popularité mesure les quantités vendues dans les commandes payées et leurs statuts logistiques suivants ; les commandes annulées/en attente sont exclues. Les produits brouillons et catégories archivées sont masqués sur toutes les entrées publiques. Les coups de cœur de l’accueil proviennent de `isFeatured` (maximum six).
 
-Les filtres GET et la saisie numérique du budget fonctionnent sans JavaScript ; le curseur synchronisé et les miniatures de galerie utilisent des composants client. L’ajout au panier sera implémenté dans le lot suivant. Les images SVG du seed sont des illustrations de démonstration ; les images JPEG/PNG pourront être optimisées via `next/image` avec l’origine Unsplash autorisée.
+Les filtres GET et la saisie numérique du budget fonctionnent sans JavaScript ; le curseur synchronisé et les miniatures de galerie utilisent des composants client. Les formulaires panier utilisent les Server Actions Next et les données du catalogue serveur. Les images SVG du seed sont des illustrations de démonstration ; les images JPEG/PNG pourront être optimisées via `next/image` avec l’origine Unsplash autorisée.
 
 Les fiches ont leurs métadonnées, URL canonique et Open Graph. Les variantes filtrées du catalogue sont `noindex, follow`. Le sitemap ne contient que les fiches publiées de catégories actives. **Configurer NEXT_PUBLIC_APP_URL avec l’origine réelle avant déploiement**. robots.txt est une indication aux robots, pas un contrôle d’accès ; les futurs espaces privés devront être protégés côté serveur.
 
 Les tests HTTP vérifient le HTML et les statuts, pas les interactions dans un navigateur. Le benchmark mesure le service PostgreSQL local après échauffement ; il ne mesure pas Lighthouse ni le temps de rendu utilisateur.
 
 Le panier invité est maintenant disponible sur `/panier` : ajout depuis une fiche, quantités, suppression, badge et codes BIENVENUE10 / PORT0. Le cookie privé persiste 30 jours ; les prix et stocks restent vérifiés côté serveur. Port standard offert dès 60 € après remise. L’authentification, la fusion du panier et le paiement sont les prochaines étapes.
+
+Contrôle du parcours panier : `npm run test:cart-http` (serveur local sur 127.0.0.1:3000 et base de démonstration nécessaires). Le test nettoie son panier en fin d’exécution. Dans les environnements où Turbopack ne peut pas ouvrir son port interne, `npm run dev -- --webpack` et `npm run build -- --webpack` permettent de vérifier le projet avec Webpack.
