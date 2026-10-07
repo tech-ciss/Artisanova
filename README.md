@@ -25,6 +25,8 @@ npm run db:seed      # initialise la démonstration locale
 npm run db:status    # état des migrations
 npm test            # tests unitaires, sans base
 npm run test:db      # tests PostgreSQL, après setup
+npm run test:catalog-http # contrôles HTTP, serveur local démarré sur 3000
+npm run bench:catalogue   # benchmark local du service PostgreSQL
 npm run lint
 npm run build
 ```
@@ -67,3 +69,17 @@ Le CLI et le client Prisma sont alignés sur 7.10.0. La configuration CLI et l�
 L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant, comptes, checkout et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
 
 Le fichier [SUIVI_PROJET.md](SUIVI_PROJET.md) consigne les décisions, réalisations, preuves et simplifications. Les audits navigateur, WCAG, Lighthouse et couverture des services restent à réaliser. Le projet n’est pas prêt à recevoir de véritables achats.
+
+## Catalogue et référencement
+
+Routes : `/catalogue`, `/produits/tasse-gres-creme`, `/sitemap.xml`, `/robots.txt`.
+
+Exemple partageable : `/catalogue?q=gr%C3%A8s&category=ceramiques&min=25&max=60&available=1&sort=price-asc`.
+
+Les prix de l’URL sont en euros, convertis et validés côté serveur en centimes. La popularité mesure les quantités vendues dans les commandes payées et leurs statuts logistiques suivants ; les commandes annulées/en attente sont exclues. Les produits brouillons et catégories archivées sont masqués sur toutes les entrées publiques. Les coups de cœur de l’accueil proviennent de `isFeatured` (maximum six).
+
+Les filtres GET et la saisie numérique du budget fonctionnent sans JavaScript ; le curseur synchronisé et les miniatures de galerie utilisent des composants client. L’ajout au panier sera implémenté dans le lot suivant. Les images SVG du seed sont des illustrations de démonstration ; les images JPEG/PNG pourront être optimisées via `next/image` avec l’origine Unsplash autorisée.
+
+Les fiches ont leurs métadonnées, URL canonique et Open Graph. Les variantes filtrées du catalogue sont `noindex, follow`. Le sitemap ne contient que les fiches publiées de catégories actives. **Configurer NEXT_PUBLIC_APP_URL avec l’origine réelle avant déploiement**. robots.txt est une indication aux robots, pas un contrôle d’accès ; les futurs espaces privés devront être protégés côté serveur.
+
+Les tests HTTP vérifient le HTML et les statuts, pas les interactions dans un navigateur. Le benchmark mesure le service PostgreSQL local après échauffement ; il ne mesure pas Lighthouse ni le temps de rendu utilisateur.

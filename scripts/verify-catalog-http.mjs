@@ -1,0 +1,32 @@
+import assert from "node:assert/strict";
+const origin = "http://127.0.0.1:3000";
+async function page(path, status = 200) {
+  const response = await fetch(`${origin}${path}`, { headers: { "User-Agent": "facebookexternalhit/1.1" } });
+  assert.equal(response.status, status, `${path} : statut inattendu`);
+  return (await response.text()).replace(/<!--[^]*?-->/g, "");
+}
+const home = await page("/");
+assert.equal((home.match(/class="product-card"/g) ?? []).length, 5);
+const catalogue = await page("/catalogue");
+assert.equal((catalogue.match(/class="product-card"/g) ?? []).length, 12);
+assert.match(catalogue, /Page 1 sur 3/);
+const filtered = await page("/catalogue?q=GR%C3%88S&category=ceramiques&min=25&max=60&available=1");
+assert.equal((filtered.match(/class="product-card"/g) ?? []).length, 1);
+assert.match(filtered, /Pichet en grès/);
+const invalid = await page("/catalogue?min=20&max=10");
+assert.match(invalid, /Corrigez les filtres/);
+assert.match(invalid, /aria-invalid="true"/);
+assert.equal((invalid.match(/class="product-card"/g) ?? []).length, 0);
+const empty = await page("/catalogue?q=zzzinexistant");
+assert.match(empty, /Aucune création ne correspond/);
+const product = await page("/produits/tasse-gres-creme");
+assert.match(product, /Tasse en grès crème/);
+assert.match(product, /property="og:title"/);
+assert.match(product, /rel="canonical"/);
+assert.equal((product.match(/class="product-card"/g) ?? []).length, 4);
+await page("/produits/inexistant", 404);
+assert.equal((await fetch(`${origin}/produits/inexistant`)).status, 404, "404 avec un agent standard");
+const sitemap = await page("/sitemap.xml");
+assert.equal((sitemap.match(/<url>/g) ?? []).length, 27);
+assert.match(await page("/robots.txt"), /Sitemap:/);
+console.info("HTTP : accueil, pagination, filtres, erreurs, état vide, fiche, 404 et SEO validés. Agent bloquant les métadonnées pour vérifier les statuts avant streaming.");

@@ -35,10 +35,10 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
 | F emails | À faire | Outbox en BDD ; événements inscription, commande, expédition, reset, admin. |
 | BDD / seed / migrations | Fait | Schéma PostgreSQL complet, migration versionnée et appliquée ; 1 admin +3 clients hashés, 5 artisans et catégories, 25 produits illustrés, 2 promotions, 10 commandes, adresses et emails simulés. Relance sans duplication vérifiée. |
-| UI/UX | Partiel | Mise en page mobile-first, liens clavier, focus visible, lien d’évitement, HTML français, préférence mouvement réduit. États loading/error et formulaires restent à faire. |
+| UI/UX | Partiel | Catalogue mobile-first, champs associés aux labels, erreurs de filtres, pagination, état vide, chargement et reprise après erreur. Formulaires mutatifs et audit navigateur restent à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
-| Performance / SEO | Partiel | Métadonnées accueil, Server Component, polices locales. Images, metadata fiches, sitemap, robots et Lighthouse ≥85 à faire. |
-| Tests | Partiel | 9 tests unitaires et 9 tests PostgreSQL passent : contraintes, données, snapshots, dernier stock concurrent et seed relançable. Services de transitions, accès manipulés, checkout E2E et couverture ≥60 % restent à faire. |
+| Performance / SEO | Partiel | Métadonnées produit/OG/canoniques, next/image, sitemap des produits publics et robots. Recherche locale mesurée ; Lighthouse ≥85 et aperçu social réel restent à vérifier. |
+| Tests | Partiel | 11 tests unitaires, 12 tests PostgreSQL et contrôles HTTP passent. Services de transitions, accès manipulés, checkout E2E, tests navigateur et couverture ≥60 % restent à faire. |
 | Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Déploiement et documentation de paiement restent à faire. |
 | Déploiement | À faire | Choisir hébergement après socle persistant validé. |
 | Bonus | À faire | Reporter après validation du MVP ; wishlist, avis acheteurs, PDF, Stripe test et emails réels prioritaires à évaluer. |
@@ -60,7 +60,7 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 ## Ordre des prochains lots
 
 1. **Terminé :** stabiliser Prisma/client, PostgreSQL local, schéma, migrations et seed reproductible.
-2. Catalogue branché sur BDD, fiche produit, recherche et filtres URL.
+2. **Terminé :** catalogue branché sur BDD, fiche produit, recherche et filtres URL (A6 réservé au lot panier).
 3. Panier persistant et promotions validées serveur, puis auth et fusion panier.
 4. Checkout invité transactionnel, tests concurrence/idempotence et emails simulés.
 5. Espace client puis back-office avec protections testées.
@@ -140,4 +140,18 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Loading du catalogue limité à son segment : une frontière Suspense globale envoyait HTTP 200 avant qu’une fiche inexistante soit détectée. Le déplacement préserve les vrais 404 des fiches testées.
 - Fiches : métadonnées par produit avec React cache pour partager la lecture entre metadata et page. `next/image`, propriétés sizes et preload pour la galerie selon la documentation Next installée. SVG locaux servis sans transformation bitmap ; images Unsplash autorisées par hostname uniquement.
 - `AGENTS.md` et `CLAUDE.md` ont été générés par Next dev ; conservés pour rappeler la consultation de la documentation de la version installée.
-- Audit visuel, interactions galerie/curseur dans un navigateur, lecteurs d’écran et Lighthouse restent à réaliser : aucun navigateur pilotable disponible dans cette session. Contrôles HTTP en cours.
+- Audit visuel, interactions galerie/curseur dans un navigateur, lecteurs d’écran et Lighthouse restent à réaliser : aucun navigateur pilotable disponible dans cette session. Contrôles HTTP réussis ; interactions navigateur non vérifiées.
+
+### 2026-10-07 — SEO et vérifications finales
+
+- Métadonnées produit, Open Graph, canoniques ; variantes du catalogue avec paramètres en noindex/follow pour limiter les duplications. Origine publique issue de NEXT_PUBLIC_APP_URL ; à configurer correctement au déploiement.
+- Sitemap dynamique : accueil, catalogue et 25 fiches publiques dans le seed. Produits brouillons et catégories archivées exclus. robots.txt indique les espaces privés prévus ; il ne remplace pas une protection d’accès.
+- `npm run test:catalog-http` réussi : accueil avec cinq coups de cœur, douze cartes sur la première page, filtres combinés, erreurs de bornes, état vide, fiche et quatre similaires, métadonnées, sitemap de 27 URL, robots et HTTP 404 (robot HTML limité **et agent standard**).
+- Les commentaires de streaming React sont retirés uniquement dans la lecture du test pour comparer les textes du HTML ; aucune modification du rendu applicatif. Test HTTP sur Next dev local, sans navigateur ni mesure Lighthouse.
+- `npm run bench:catalogue` : 25 produits, 20 échantillons après échauffement ; médiane **8,20 ms**, p95 **10,81 ms**, maximum **12,16 ms**. Mesure du service PostgreSQL local, comprenant ses lectures ; exclut réseau utilisateur, compilation, rendu et navigateur. Pas une garantie de temps de réponse en production.
+- Contrastes calculés sur quatre paires explicites : texte brun/crème **13,11:1**, texte secondaire/crème **6,46:1**, blanc/vert boutons **9,98:1**, erreurs terre cuite/crème **7,14:1**. Toutes dépassent AA 4,5:1 pour texte normal ; pas un audit exhaustif WCAG.
+- `npm test` : **11 réussis** ; `npm run test:db` : **12 réussis** ; lint et TypeScript réussis.
+- `npm run build` réussi sur la version finale : accueil/catalogue/fiches/sitemap dynamiques, robots et page introuvable générés. L’ancien cache de types Next dev référençait le fichier d’accueil déplacé ; le validateur généré obsolète a été supprimé puis régénéré.
+- Avertissement de dépréciation observé avec pg 8.23 lors des lectures Prisma : non bloquant ; vérifier la compatibilité de l’adaptateur avant une évolution vers pg 9. Aucun contournement ni suppression d’avertissement.
+- Simplifications : illustrations SVG de démonstration (aperçu social SVG à remplacer par une image bitmap avant publication) ; galerie multi-image implémentée mais seed à une image par produit ; pas de full-text/trigram ni autocomplete (bonus), pas d’ajout au panier dans ce lot.
+- Pas de score Lighthouse, certification WCAG, test visuel 320 px/zoom ou validation interactive galerie/curseur revendiqués.
