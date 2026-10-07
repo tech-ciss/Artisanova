@@ -236,3 +236,55 @@ test("panier : prix actualisé, rupture et promotion expirée signalés", async 
     assert.equal(await tx.cartItem.count({ where: { cartId: cart.id } }), 1);
   });
 });
+
+test("auth : inscription client, rotation, fusion concurrente et jeton invité consommé", async () => {
+  const { register, authenticate, resolveSession, revokeSession, AuthError, throttleKey } = await import("../src/lib/services/auth.service");
+  const { mutateCart, readCart, tokenHash, CartError } = await import("../src/lib/services/persistent-cart.service");
+  const email = `auth-${randomUUID()}@example.test`;
+  const guestHash = tokenHash(randomUUID().replaceAll("-", "").repeat(2))!;
+  const password = "Auth-Test-42";
+  try {
+    const first = await register(db, { email: email.toUpperCase(), password, confirmation: password, firstName: "Test", lastName: "Auth", role: "ADMIN" }, null);
+    const user = await resolveSession(db, first.token);
+    assert.ok(user);
+    assert.equal(user.role, "CLIENT");
+    assert.equal(Object.hasOwn(user, "passwordHash"), false);
+    const stored = await db.user.findUniqueOrThrow({ where: { email } });
+    assert.ok(await compare(password, stored.passwordHash));
+    await assert.rejects(register(db, { email, password, confirmation: password, firstName: "Test", lastName: "Auth" }, null), AuthError);
+    await assert.rejects(authenticate(db, { email, password: "Wrong-42" }, null), { message: "Email ou mot de passe incorrect." });
+    await mutateCart(db, { userId: user.id }, { operation: "add", productId: "demo-product-1-1", quantity: 4 });
+    await mutateCart(db, guestHash, { operation: "add", productId: "demo-product-1-1", quantity: 5 });
+    await mutateCart(db, guestHash, { operation: "promo", code: "BIENVENUE10" });
+    const sessions = await Promise.all([1, 2].map(() => authenticate(db, { email, password }, guestHash, first.token)));
+    assert.equal(sessions.filter(session => session.merged).length, 1);
+    assert.equal(await resolveSession(db, first.token), null);
+    const cart = await readCart(db, { userId: user.id });
+    assert.equal(cart.count, 9);
+    assert.equal(cart.items[0].available, false); // Stock 8, preserve the visitor's choice.
+    assert.equal(cart.code, "BIENVENUE10");
+    assert.equal((await readCart(db, guestHash)).count, 0);
+    await assert.rejects(mutateCart(db, guestHash, { operation: "add", productId: "demo-product-1-2", quantity: 1 }), CartError);
+    await revokeSession(db, sessions[0].token);
+    assert.equal(await resolveSession(db, sessions[0].token), null);
+    assert.equal((await readCart(db, { userId: user.id })).count, 9);
+    assert.equal(await resolveSession(db, sessions[1].token, new Date(Date.now() + 31 * 86400000)), null);
+    assert.equal(await resolveSession(db, "forged-token"), null);
+  } finally {
+    await db.user.deleteMany({ where: { email } });
+    await db.cart.deleteMany({ where: { sessionId: guestHash } });
+    await db.authThrottle.deleteMany({ where: { key: throttleKey(email) } });
+  }
+});
+
+test("auth : limitation des tentatives atomique et réinitialisation de la fenêtre", async () => {
+  const { consumeAuthAttempt, throttleKey } = await import("../src/lib/services/auth.service");
+  const email = `throttle-${randomUUID()}@example.test`;
+  try {
+    const allowed = await Promise.all(Array.from({ length: 12 }, () => consumeAuthAttempt(db, email)));
+    assert.equal(allowed.filter(Boolean).length, 10);
+    await db.authThrottle.update({ where: { key: throttleKey(email) }, data: { resetsAt: new Date(0) } });
+    assert.equal(await consumeAuthAttempt(db, email), true);
+    assert.equal((await db.authThrottle.findUniqueOrThrow({ where: { key: throttleKey(email) } })).attempts, 1);
+  } finally { await db.authThrottle.deleteMany({ where: { key: throttleKey(email) } }); }
+});

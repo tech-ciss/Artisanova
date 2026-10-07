@@ -190,6 +190,7 @@ model ProductImage {
 }
 
 model Cart {
+  mergedAt DateTime? @db.Timestamptz(3)
   promoCode String?
   id        String     @id @default(cuid())
   userId    String?    @unique
@@ -361,4 +362,13 @@ model StockMovement {
   @@unique([orderId, productId, kind])
   @@index([productId, createdAt])
   @@map("stock_movements")
+}
+
+model AuthThrottle {
+  key       String   @id
+  attempts  Int
+  resetsAt  DateTime @db.Timestamptz(3)
+
+  @@index([resetsAt])
+  @@map("auth_throttles")
 }

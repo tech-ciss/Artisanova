@@ -1,10 +1,19 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { calculateCart } from "./cart.service";
 
 export const tokenHash = (token: string) => /^[a-f0-9]{64}$/.test(token) ? createHash("sha256").update(token).digest("hex") : null;
 export class CartError extends Error {}
+// Trusted server identity only: the public actions never accept userId/cartId.
+export type CartOwner = string | { userId: string };
+export const cartWhere = (owner: CartOwner) => typeof owner === "string" ? { sessionId: owner } : { userId: owner.userId };
+export const cartLockKey = (owner: CartOwner) => typeof owner === "string" ? `guest:${owner}` : `user:${owner.userId}`;
+export async function lockCartOwners(tx: Prisma.TransactionClient, owners: CartOwner[]) {
+  for (const key of [...new Set(owners.map(cartLockKey))].sort()) {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))::text`;
+  }
+}
 export const cartInput = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("add"), productId: z.string().min(1).max(100), quantity: z.coerce.number().int().min(1).max(999) }),
   z.object({ operation: z.literal("set"), productId: z.string().min(1).max(100), quantity: z.coerce.number().int().min(1).max(999) }),
@@ -12,8 +21,9 @@ export const cartInput = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("promo"), code: z.string().trim().toUpperCase().max(40) }),
 ]);
 const include = { items: { orderBy: { id: "asc" as const }, include: { product: { include: { category: true } } } } };
-export async function readCart(db: Pick<PrismaClient, "cart" | "promoCode">, sessionId: string | null) {
-  const cart = sessionId ? await db.cart.findUnique({ where: { sessionId }, include }) : null;
+export async function readCart(db: Pick<PrismaClient, "cart" | "promoCode">, owner: CartOwner | null) {
+  const found = owner ? await db.cart.findUnique({ where: cartWhere(owner), include }) : null;
+  const cart = found?.mergedAt ? null : found;
   const items = (cart?.items ?? []).map(item => ({ ...item, available: item.product.status === "PUBLISHED" && !item.product.category.isArchived && item.quantity <= item.product.stock }));
   const lines = items.filter(item => item.available).map(item => ({ productId: item.productId, unitPriceCents: item.product.priceCents, quantity: item.quantity, stock: item.product.stock }));
   const promo = cart?.promoCode ? await db.promoCode.findUnique({ where: { code: cart.promoCode } }) : null;
@@ -27,13 +37,14 @@ export async function readCart(db: Pick<PrismaClient, "cart" | "promoCode">, ses
   }
   return { items, count: items.reduce((sum, item) => sum + item.quantity, 0), code: cart?.promoCode ?? "", promotionError, totals };
 }
-export async function mutateCart(db: PrismaClient, sessionId: string, input: z.infer<typeof cartInput>) {
+export async function mutateCart(db: PrismaClient, owner: CartOwner, input: z.infer<typeof cartInput>) {
   const parsed = cartInput.safeParse(input);
   if (!parsed.success) throw new CartError("Vérifiez la quantité ou le code renseigné.");
   input = parsed.data;
   return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${sessionId}, 0))::text`;
-    const cart = await tx.cart.upsert({ where: { sessionId }, create: { sessionId }, update: {} });
+    await lockCartOwners(tx, [owner]);
+    const cart = await tx.cart.upsert({ where: cartWhere(owner), create: cartWhere(owner), update: {} });
+    if (cart.mergedAt) throw new CartError("Ce panier a été fusionné. Rechargez la page avant de le modifier.");
     // Serialize mutations across tabs; never trust a cart ID supplied by a visitor.
     await tx.$queryRaw`SELECT id FROM carts WHERE id = ${cart.id} FOR UPDATE`;
     if (input.operation === "promo") {
