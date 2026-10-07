@@ -187,3 +187,11 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Fusion transactionnelle : quantités additionnées, code invité prioritaire s’il existe, sinon code du compte. Stock devenu insuffisant : choix conservé et averti par le panier. Limites 100 créations/999 pièces : fusion refusée explicitement et transaction annulée, aucune ligne supprimée silencieusement.
 - Verrous consultatifs dans un ordre déterministe pour invité et compte ; mutations du compte partagent le même verrou. Marqueur mergedAt sur la source vidée : un ancien appel invité ne peut pas recréer le panier après fusion. Le panier du compte reste en BDD après déconnexion.
 - Tests à ce stade : 14 unitaires et 16 PostgreSQL réussis, dont fusion concurrente exécutée une seule fois, rotation/révocation/expiration, rôle non injectable et fenêtre de tentatives atomique.
+
+### 2026-10-07 — formulaires et accès au compte
+
+- Routes /inscription, /connexion, /compte ; compte protégé par vérification serveur de session, navigation globale adaptée, panier lu/modifié selon l’identité serveur. Le navigateur ne fournit jamais son propriétaire de panier.
+- Formulaires avec labels, autocomplete, affichage facultatif du mot de passe, erreurs associées aux champs, focus sur le premier champ invalide après réponse client et boutons pending. Email/noms conservés après erreur ; mots de passe non renvoyés dans l’état du formulaire.
+- Connexion/inscription redirigent vers le panier si des articles ont été fusionnés ; message de vérification des quantités. Déconnexion POST avec révocation puis notification. Aucun paramètre de redirection externe accepté.
+- Compte minimal : identité et lien panier, sans liens vers des fonctionnalités absentes. Adresses, profil, historique/factures restent pour le lot espace client ; commande invité toujours prévue au checkout.
+- robots/noindex complétés pour les routes de compte et panier. Les autorisations restent côté serveur et ne dépendent jamais de robots.txt.
