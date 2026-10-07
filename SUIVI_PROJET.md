@@ -1,6 +1,6 @@
 # Artisanova — suivi de conception et de réalisation
 
-Dernière mise à jour : 6 octobre 2026. Référence : `Exercice Conception d.md`.
+Dernière mise à jour : 7 octobre 2026. Référence : `Exercice Conception d.md`.
 Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves reproductibles. Aucune note ne peut être garantie.
 
 ## États et règle de suivi
@@ -120,3 +120,12 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - `npm run db:status` : schéma à jour.
 - `npm ci --ignore-scripts --dry-run` : réussi, verrou npm cohérent. Le contrôle hors ligne a d’abord échoué faute de métadonnées en cache ; la vérification avec accès au registre a réussi. Ce dry-run ne remplace pas une installation complète sur une machine vierge.
 - `git diff --check` : réussi.
+
+### 2026-10-07 — services du catalogue
+
+- Filtres URL validés avec Zod côté serveur : recherche, catégorie, bornes de prix, disponibilité, tri et page. Prix décimaux FR/EN convertis en centimes sans multiplication flottante ; URL reconstruites avec URLSearchParams.
+- Catalogue PostgreSQL paginé par 12, tri déterministe avec ID en départage, compte et page cohérents dans une transaction RepeatableRead. Une page excessive sera ramenée à la dernière page et l’interface redirigera vers son URL.
+- Recherche normalisée par mots, avec échappement des caractères SQL LIKE `%`, `_`, `\` et requêtes paramétrées. Popularité = somme des quantités des commandes PAID/PREPARING/SHIPPED/DELIVERED ; commandes en attente/annulées exclues.
+- Publication et catégorie non archivée imposées aux listes, coups de cœur, fiches et similaires. Relations chargées par lots ; aucune requête par carte produit.
+- `npm test` : 11 tests réussis. `npm run test:db` : 12 tests réussis, avec fixtures brouillon/catégorie archivée testées via les vrais services puis supprimées. Contrôle TypeScript corrigé après adaptation des transformations Zod.
+- Décision : le catalogue, la galerie et les fiches constituent ce lot. A6 (quantité et ajout au panier) reste pour le lot panier ; aucune simulation d’ajout présentée comme une commande réelle.

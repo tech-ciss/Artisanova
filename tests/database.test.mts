@@ -130,3 +130,63 @@ test("relancer le seed ne duplique rien et conserve les données existantes", as
   await promisify(execFile)(process.execPath, ["node_modules/tsx/dist/cli.mjs", "prisma/seed.ts"], { timeout: 30000 });
   assert.deepEqual(await snapshot(), before);
 });
+
+import { listCatalog, featuredProducts, productBySlug, similarProducts } from "../src/lib/services/catalog.service";
+import { catalogFiltersSchema } from "../src/lib/validations/catalog";
+
+test("catalogue : pagination de 12, filtres combinés et recherche avec accents", async () => {
+  const page = await listCatalog(db, catalogFiltersSchema.parse({}));
+  assert.equal(page.total, 25);
+  assert.equal(page.products.length, 12);
+  assert.equal(page.pages, 3);
+  const second = await listCatalog(db, catalogFiltersSchema.parse({ page: 2 }));
+  assert.equal(second.products.length, 12);
+  assert.equal(page.products.some(product => second.products.some(other => other.id === product.id)), false);
+  assert.equal((await listCatalog(db, catalogFiltersSchema.parse({ page: 1000 }))).page, 3);
+  const filtered = await listCatalog(db, catalogFiltersSchema.parse({ q: "GRÈS", category: "ceramiques", min: 2500, max: 6000, available: true }));
+  assert.deepEqual(filtered.products.map(product => product.slug), ["pichet-gres"]);
+  const allStock = await listCatalog(db, catalogFiltersSchema.parse({ available: true }));
+  assert.equal(allStock.total, 24);
+  for (const query of ["%", "_", "' OR 1=1 --"]) assert.equal((await listCatalog(db, catalogFiltersSchema.parse({ q: query }))).total, 0);
+});
+
+test("catalogue : tris par prix et popularité réelle des commandes payées", async () => {
+  const ascending = await listCatalog(db, catalogFiltersSchema.parse({ sort: "price-asc" }));
+  assert.equal(ascending.products[0].priceCents, 700);
+  assert.ok(ascending.products.every((entry, index) => index === 0 || entry.priceCents >= ascending.products[index - 1].priceCents));
+  const descending = await listCatalog(db, catalogFiltersSchema.parse({ sort: "price-desc" }));
+  assert.equal(descending.products[0].priceCents, 5900);
+  const popular = await listCatalog(db, catalogFiltersSchema.parse({ sort: "popular" }));
+  const bought = await db.orderItem.groupBy({ by: ["productId"], where: { order: { status: { in: ["PAID", "PREPARING", "SHIPPED", "DELIVERED"] } } }, _sum: { quantity: true } });
+  const quantities = new Map(bought.map(entry => [entry.productId, entry._sum.quantity ?? 0]));
+  assert.ok(popular.products.every((entry, index) => index === 0 || (quantities.get(entry.id) ?? 0) <= (quantities.get(popular.products[index - 1].id) ?? 0)));
+});
+
+test("catalogue : brouillons et catégories archivées invisibles sur toutes les entrées", async () => {
+  const categoryId = `test-archive-${randomUUID()}`;
+  const draftId = `test-draft-${randomUUID()}`;
+  const archivedId = `test-hidden-${randomUUID()}`;
+  await db.category.create({ data: { id: categoryId, slug: categoryId, name: "Test archive", isArchived: true } });
+  try {
+    await db.product.createMany({ data: [
+      { id: draftId, slug: draftId, title: "Hidden fixture", description: "Test", searchText: "hiddenfixture", priceCents: 1000, stock: 999, isFeatured: true, status: "DRAFT", categoryId: "demo-category-ceramiques", artisanId: "demo-artisan-1" },
+      { id: archivedId, slug: archivedId, title: "Hidden fixture", description: "Test", searchText: "hiddenfixture", priceCents: 1000, stock: 999, isFeatured: true, status: "PUBLISHED", categoryId, artisanId: "demo-artisan-1" },
+    ] });
+    assert.equal((await listCatalog(db, catalogFiltersSchema.parse({ q: "hiddenfixture" }))).total, 0);
+    assert.equal(await productBySlug(db, draftId), null);
+    assert.equal(await productBySlug(db, archivedId), null);
+    assert.ok((await featuredProducts(db)).every(entry => entry.id !== draftId && entry.id !== archivedId));
+    assert.ok((await similarProducts(db, "demo-product-1-1", "demo-category-ceramiques")).every(entry => entry.id !== draftId));
+  } finally {
+    await db.product.deleteMany({ where: { id: { in: [draftId, archivedId] } } });
+    await db.category.delete({ where: { id: categoryId } });
+  }
+  const product = await productBySlug(db, "tasse-gres-creme");
+  assert.ok(product);
+  assert.equal(await productBySlug(db, "inexistant"), null);
+  assert.equal(await productBySlug(db, "' OR 1=1"), null);
+  const related = await similarProducts(db, product.id, product.categoryId);
+  assert.equal(related.length, 4);
+  assert.ok(related.every(entry => entry.id !== product.id && entry.category.id === product.categoryId));
+  assert.equal((await featuredProducts(db)).length, 5);
+});
