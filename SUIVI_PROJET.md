@@ -243,3 +243,10 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Profil : preuve du mot de passe actuel pour toute modification, limite de tentatives existante réutilisée. Changement email/mot de passe révoque toutes les sessions et jetons de reset ; ancien hash/email revérifiés sous verrou pour refuser une modification concurrente périmée. Rôle jamais modifiable depuis le formulaire. Email non vérifié : compromis de démonstration, vérification email à ajouter avant exploitation.
 - Lecture de commande filtrée en BDD par propriétaire et référence, jamais par email. Les instantanés historiques ne changent pas avec le profil/adresses.
 - Correction de composition Zod pendant les tests : utiliser les champs du schéma plutôt que pick sur un objet avec refinements. Aucun changement de contrainte ni migration requis.
+
+### 2026-10-08 — interface et documents client
+
+- Menu client, CRUD d’adresses, profil et historique paginé (10 commandes/page), détails et historique des statuts. Toutes les pages/actions exigent la session, toutes les lectures d’objet filtrent son propriétaire ; métadonnées privées noindex héritées du layout.
+- Labels, erreurs par champ, focus sur premier champ invalide et boutons pending. Formulaires natifs utilisables sans JavaScript ; confirmation de suppression dans l’interface. Responsive en une colonne puis deux, cibles de navigation ≥44 px. Audit navigateur non effectué.
+- Facture de démonstration téléchargeable en HTML imprimable, issue des instantanés, échappement HTML, CSP sans scripts, attachment, private/no-store et nosniff. Sans numéro fiscal ni valeur comptable : entreprise et achats fictifs. Un vrai PDF et les mentions fiscales vérifiées restent à réaliser ; aucun bonus PDF revendiqué.
+- Choix d’adresse enregistrée livraison disponible au checkout ; facturation distincte saisie manuellement, sélection de facture enregistrée au checkout encore simplifiée.
