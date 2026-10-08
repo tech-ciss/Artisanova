@@ -236,3 +236,10 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - README : cartes fictives, parcours, garanties, limites de preuve du reçu et reprise des emails documentés. Variable admin ajoutée uniquement au fichier exemple ; configuration locale existante conservée.
 - Restent : espace client complet et back-office ; audit navigateur responsive/zoom/clavier/lecteur d’écran, scores Lighthouse et couverture instrumentée. Aucun audit WCAG ni achat réel revendiqué.
 - Versionnement progressif : transaction backend, interface du tunnel, puis tests HTTP et documentation. Commits locaux, sans publication distante.
+
+### 2026-10-08 — services de l’espace client
+
+- Adresses CRUD françaises validées Zod, propriétaire imposé par session. Maximum 20 adresses ; verrou de ligne utilisateur et index SQL existant garantissent un défaut unique par usage. Première adresse automatiquement par défaut, remplacement après suppression ou changement d’usage. Une adresse par défaut reste telle tant qu’une autre n’est pas choisie.
+- Profil : preuve du mot de passe actuel pour toute modification, limite de tentatives existante réutilisée. Changement email/mot de passe révoque toutes les sessions et jetons de reset ; ancien hash/email revérifiés sous verrou pour refuser une modification concurrente périmée. Rôle jamais modifiable depuis le formulaire. Email non vérifié : compromis de démonstration, vérification email à ajouter avant exploitation.
+- Lecture de commande filtrée en BDD par propriétaire et référence, jamais par email. Les instantanés historiques ne changent pas avec le profil/adresses.
+- Correction de composition Zod pendant les tests : utiliser les champs du schéma plutôt que pick sur un objet avec refinements. Aucun changement de contrainte ni migration requis.
