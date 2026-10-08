@@ -282,3 +282,11 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Date limite de promo choisie avec calendrier, valide jusqu’à la fin du jour Europe/Paris. Conversion SQL vers minuit du lendemain (borne exclusive), heure d’été incluse ; édition affiche le dernier jour valide. Test du 1er juillet 2027 : expiration 22:00 UTC, soit minuit France le 2 juillet.
 - Cases à cocher conservées explicitement après erreur ; cibles de confirmation compactes et labels ≥44 px, focus visible dans les champs admin, résumés de modification accessibles au clavier.
 - Agrégats du dashboard exécutés successivement dans la même transaction, pour respecter la connexion PostgreSQL partagée et éviter un usage concurrent du driver déprécié. Pagination et requête unique des titres conservées.
+
+### 2026-10-08 — validation finale du back-office
+
+- `npm test` : **20 réussis** ; `npm run test:db` : **28 réussis**. Six scénarios admin incluent vente/ajustement concurrents et frontière du mois Paris, CA annulé exclu, annulation répétée, expédition unique, catégorie archivée et usages promo préservés. Tests admin ciblés repassés après finition des dates.
+- `npm run test:admin-http` réussi, puis repassé sur les formulaires finaux et calendrier promo. `test:account-http`, `test:checkout-http` et `test:catalog-http` réussis après intégration admin ; fixtures dédiées nettoyées, seed et catalogue conservés.
+- Lint et TypeScript réussis ; compilation de production `npm run build -- --webpack` validée. Serveur de test lancé pour ce lot arrêté après les contrôles. Aucune dépendance ajoutée ni publication distante.
+- Limites restantes : bienvenue/reset, rate limiting checkout explicite et nettoyage planifié des données expirées ; audit navigateur mobile/zoom/clavier/lecteur d’écran, scores Lighthouse, couverture instrumentée ≥60 %, PDF et vérification email, déploiement. Les choix de démonstration n’équivalent pas à une validation commerciale ou WCAG.
+- Versionnement : services/migration/tests métier, écrans, finitions, puis tests HTTP et documentation. README et matrice actualisés avec réalisations et simplifications, aucun secret ni donnée de base versionnés.

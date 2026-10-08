@@ -66,7 +66,7 @@ Le CLI et le client Prisma sont alignés sur 7.10.0. La configuration CLI et l�
 
 ## État et limites
 
-L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant et authentification sont disponibles. Le tunnel invité et compte est disponible. Adresses, profil et historique sont disponibles ; le back-office reste à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
+L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant et authentification sont disponibles. Le tunnel invité et compte est disponible. Adresses, profil, historique et back-office administrateur sont disponibles. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
 
 Le fichier [SUIVI_PROJET.md](SUIVI_PROJET.md) consigne les décisions, réalisations, preuves et simplifications. Les audits navigateur, WCAG, Lighthouse et couverture des services restent à réaliser. Le projet n’est pas prêt à recevoir de véritables achats.
 
@@ -138,3 +138,17 @@ Depuis `/compte` :
 - Document de facture téléchargeable en HTML imprimable depuis chaque commande. Basé sur ses instantanés et protégé par propriétaire, sans cache. Document fictif sans valeur comptable ; PDF et mentions fiscales d’une entreprise réelle restent à réaliser.
 
 `npm run test:account-http` vérifie les formulaires, la révocation, l’historique et l’isolation des documents, avec nettoyage des fixtures. Serveur local sur 127.0.0.1:3000 et base de démonstration requis. Les tests PostgreSQL couvrent aussi les défauts d’adresse concurrents et l’impossibilité de modifier l’adresse d’un autre client.
+
+## Administration
+
+Se connecter avec le compte admin de démonstration puis ouvrir `/admin`. Chaque page et action vérifie le rôle en base ; un client reçoit une 404 et le visiteur est redirigé vers la connexion. Le rôle transmis par un formulaire n’est jamais accepté.
+
+- Tableau de bord : CA TTC, nombre de commandes du mois, moyenne des commandes payées, ruptures publiques et top cinq des ventes. Mois Europe/Paris ; CA/moyenne excluent attente/annulations, compteur inclut tous statuts. Top ventes toutes périodes.
+- Produits : titre, slug, Markdown simple, prix TTC et TVA (HT calculé), stock, artisan/catégorie, publication, 1–5 images et sélection de coups de cœur (maximum six). Images par URL locale `/demo` ou `/images`, ou HTTPS `images.unsplash.com` ; alternatives obligatoires. Pas d’upload dans ce lot. Markdown : paragraphes, titres `##` et listes `-`, sans HTML ni liens interprétés.
+- Une fiche ouverte avant un changement de stock doit être rechargée ; son ancien formulaire ne peut pas écraser le nouvel inventaire. Les ajustements de stock enregistrent auteur et motif.
+- Catégories : CRUD ; une catégorie utilisée peut être archivée mais pas supprimée. Ses produits sont masqués dans la boutique. Un produit utilisé dans un panier, une commande ou un mouvement de stock est retiré du catalogue plutôt que supprimé physiquement.
+- Commandes : recherche client/email/référence, statut et jour Europe/Paris, détail et historique. Transitions : payée → préparation → expédiée → livrée ; annulation possible avant expédition. Le statut payé provient du checkout. Annuler rembourse uniquement le paiement mock et réapprovisionne une fois ; pas de retour après expédition, ni de remboursement externe. L’usage promo reste consommé.
+- Promotions : pourcentage entier, montant fixe en euros ou port offert (valeur 0), date limite jusqu’à fin de journée Europe/Paris, plafond et activation. Les usages sont conservés et une limite ne peut pas descendre sous les usages déjà consommés. Désactivation plutôt que suppression historique.
+- Emails : historique paginé des événements simulés, dont l’expédition. Un rejeu de transition ne crée pas de nouvel email. Bienvenue et récupération de mot de passe restent à réaliser.
+
+Les listes sont paginées à 20 lignes. `npm run test:admin-http` vérifie les formulaires, les origines d’images, le stock périmé, les transitions, l’email unique et le refus d’une action après retrait du rôle. Serveur local sur 127.0.0.1:3000 et base de démonstration requis ; fixtures nettoyées. Les tests PostgreSQL vérifient également achat/ajustement concurrents et annulation répétée.

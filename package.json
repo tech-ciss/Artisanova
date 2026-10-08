@@ -21,7 +21,8 @@
     "test:auth-http": "tsx scripts/verify-auth-http.mts",
     "emails:simulate": "tsx scripts/simulate-emails.mts",
     "test:checkout-http": "tsx scripts/verify-checkout-http.mts",
-    "test:account-http": "tsx scripts/verify-account-http.mts"
+    "test:account-http": "tsx scripts/verify-account-http.mts",
+    "test:admin-http": "tsx scripts/verify-admin-http.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

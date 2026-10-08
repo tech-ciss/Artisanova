@@ -85,6 +85,33 @@ test("admin : limite promotionnelle ne peut pas effacer les usages",async()=>{
   await db.promoCode.update({where:{id:promo.id},data:{usedCount:2}});
   await assert.rejects(savePromo(db,f.admin.id,{...input,maxUses:"1"},promo.id),/inférieur/);
   await assert.rejects(savePromo(db,f.client.id,input,promo.id),/administrateur/);
-  const updated=await savePromo(db,f.admin.id,{...input,maxUses:"2",isActive:false,usedCount:"0"},promo.id);assert.equal(updated.usedCount,2);assert.equal(updated.isActive,false);
+  const updated=await savePromo(db,f.admin.id,{...input,maxUses:"2",isActive:false,usedCount:"0",expiresAt:"2027-07-01"},promo.id);assert.equal(updated.usedCount,2);assert.equal(updated.isActive,false);assert.equal(updated.expiresAt?.toISOString(),"2027-07-01T22:00:00.000Z");
+ }finally{await f.clean();}
+});
+test("admin : ajustement de stock concurrent avec un achat sans vente perdue",async()=>{
+ const f=await fixture();try{
+  await mutateCart(db,f.owner,{operation:"add",productId:f.product.id,quantity:1});
+  const token=await prepareCheckout(db,f.owner,{email:"test@example.test",firstName:"Test",lastName:"Client",line1:"1 rue Fictive",city:"Nantes",zip:"44000",country:"FR",shippingMethod:"STANDARD"});
+  const review=await db.checkoutDraft.findUniqueOrThrow({where:{tokenHash:tokenHash(token)!}});
+  const results=await Promise.allSettled([
+   placeOrder(db,f.owner,token,{reviewId:review.id,brand:"VISA",number:"4242424242424242",expiry:"12/2035",cvc:"123",simulation:"on"}),
+   saveProduct(db,f.admin.id,{...f.input,stock:"5",stockReason:"Réception",expectedUpdatedAt:f.product.updatedAt.toISOString()},f.product.id),
+  ]);
+  assert.equal(results[0].status,"fulfilled");
+  const stock=(await db.product.findUniqueOrThrow({where:{id:f.product.id}})).stock;
+  assert.equal(stock,results[1].status==="fulfilled"?4:2);
+  assert.equal(await db.stockMovement.count({where:{productId:f.product.id,kind:"SALE"}}),1);
+ }finally{await f.clean();}
+});
+test("admin : KPI mensuels au fuseau Paris, annulations exclues du CA",async()=>{
+ const f=await fixture();try{
+  const order=await paid(f);
+  await db.order.update({where:{id:order.id},data:{createdAt:new Date("2099-03-31T22:30:00Z")}});
+  const april=await adminDashboard(db,f.admin.id,new Date("2099-04-10T12:00:00Z"));
+  assert.equal(april.orders,1);assert.equal(april.revenue,2990);assert.equal(april.average,2990);
+  const march=await adminDashboard(db,f.admin.id,new Date("2099-03-10T12:00:00Z"));assert.equal(march.orders,0);
+  await transitionOrder(db,f.admin.id,{id:order.id,from:"PAID",to:"CANCELLED"});
+  const cancelled=await adminDashboard(db,f.admin.id,new Date("2099-04-10T12:00:00Z"));
+  assert.equal(cancelled.orders,1);assert.equal(cancelled.revenue,0);assert.equal(cancelled.average,0);
  }finally{await f.clean();}
 });
