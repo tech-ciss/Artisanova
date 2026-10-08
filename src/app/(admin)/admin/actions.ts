@@ -12,6 +12,7 @@ export async function adminMutation(_: AdminState, form: FormData): Promise<Admi
   let destination: string | undefined;
   let message = "Modification enregistrée.";
   const values = Object.fromEntries([...form.entries()].filter(([key, value]) => !key.startsWith("$") && typeof value === "string").map(([key, value]) => [key, String(value).slice(0, 20000)]));
+  for (const field of ["isFeatured", "isArchived", "isActive"]) values[field] = form.get(field) === "on" ? "on" : "";
   try {
     const operation = z.enum(["product", "product-delete", "category", "category-delete", "promo", "transition"]).parse(form.get("operation"));
     const id = form.get("id") ? idInput.parse(form.get("id")) : undefined;

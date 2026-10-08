@@ -20,7 +20,7 @@ export const productInput = z.object({
   expectedUpdatedAt: z.iso.datetime().optional(),
 });
 export const categoryInput = z.object({ name, slug, description: z.string().trim().max(5000), image: z.union([z.literal(""), imageUrl]), isArchived: z.boolean() });
-export const promoInput = z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{1,40}$/, "Code : lettres, chiffres, tirets, 40 caractères maximum."), type: z.enum(["PERCENT", "FIXED", "FREE_SHIPPING"]), value: moneyInput, expiresAt: z.union([z.literal(""), z.iso.datetime()]), maxUses: z.union([z.literal(""), integer]), isActive: z.boolean() }).superRefine((value, ctx) => {
+export const promoInput = z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{1,40}$/, "Code : lettres, chiffres, tirets, 40 caractères maximum."), type: z.enum(["PERCENT", "FIXED", "FREE_SHIPPING"]), value: moneyInput, expiresAt: z.union([z.literal(""), z.iso.date(), z.iso.datetime()]).refine(value => !value || !value.startsWith("0000"), "Choisissez une date valide."), maxUses: z.union([z.literal(""), integer]), isActive: z.boolean() }).superRefine((value, ctx) => {
   if (value.type === "PERCENT" && (value.value < 100 || value.value > 10000 || value.value % 100 !== 0)) ctx.addIssue({ code: "custom", path: ["value"], message: "Pourcentage entier entre 1 et 100." });
   if (value.type === "FIXED" && value.value < 1) ctx.addIssue({ code: "custom", path: ["value"], message: "Remise supérieure à zéro." });
   if (value.type === "FREE_SHIPPING" && value.value !== 0) ctx.addIssue({ code: "custom", path: ["value"], message: "Utilisez 0 pour le port offert." });

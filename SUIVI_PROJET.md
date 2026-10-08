@@ -1,6 +1,6 @@
 # Artisanova — suivi de conception et de réalisation
 
-Dernière mise à jour : 7 octobre 2026. Référence : `Exercice Conception d.md`.
+Dernière mise à jour : 8 octobre 2026. Référence : `Exercice Conception d.md`.
 Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves reproductibles. Aucune note ne peut être garantie.
 
 ## États et règle de suivi
@@ -25,7 +25,7 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 
 | Exigences | État | Livré / reste à faire |
 |---|---|---|
-| A1 accueil | Fait | Accueil, catégories actives et jusqu’à six coups de cœur sélectionnés via isFeatured en BDD (cinq dans le seed). Leur édition via le back-office reste en E1. |
+| A1 accueil | Fait | Accueil, catégories actives et jusqu’à six coups de cœur sélectionnés via isFeatured en BDD (cinq dans le seed). Sélection éditable en back-office, maximum six. |
 | A2–A5 catalogue | Fait | Catalogue PostgreSQL, pagination 12, tris, filtres combinés partageables, prix avec curseur, recherche normalisée, galerie, artisan, stock et similaires. Mesures de performance et audit navigateur détaillés dans le journal. |
 | A6 ajout au panier | Fait | Quantité et ajout depuis la fiche, stock validé côté serveur, confirmation et lien vers le panier. |
 | B1–B2 panier | Fait | Panier invité/compte, badge global, quantités, suppression, fusion transactionnelle à inscription/connexion et persistance après déconnexion. |
@@ -33,13 +33,13 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | C1–C2 authentification | Fait | Inscription, connexion, déconnexion, session expirante, fusion du panier et achat invité vérifiés. |
 | C3–C5 espace client | Fait / simplifié | CRUD adresses et défaut par usage, profil avec preuve et révocation, historique paginé/détails privés. Facture HTML imprimable de démonstration ; PDF et conformité fiscale non réalisés. |
 | D1–D5 checkout | Fait / simplifié | Invité/compte, livraison/facturation, paiement simulé, stock/promo atomiques, référence, confirmation privée. Relais fictifs et France uniquement ; preuves dans le journal. |
-| E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
-| F emails | Partiel | Commande client/admin et reprise outbox simulées ; inscription, expédition et reset restent à faire. |
+| E1–E6 admin | Fait / simplifié | Catalogue, catégories, stock audité, commandes filtrées/transitions, KPI et promos ; rôle serveur vérifié. Images par URL, Markdown simple, HT calculé depuis TTC, retraits conservant l’historique. |
+| F emails | Partiel | Commande client/admin, expédition et reprise outbox simulées ; bienvenue et reset restent à faire. |
 | BDD / seed / migrations | Fait | Schéma PostgreSQL complet, migration versionnée et appliquée ; 1 admin +3 clients hashés, 5 artisans et catégories, 25 produits illustrés, 2 promotions, 10 commandes, adresses et emails simulés. Relance sans duplication vérifiée. |
-| UI/UX | Partiel | Catalogue mobile-first, champs associés aux labels, erreurs de filtres, pagination, état vide, chargement et reprise après erreur. Formulaires panier/authentification livrés ; audit navigateur et autres modules restent à faire. |
+| UI/UX | Partiel | Catalogue mobile-first, champs associés aux labels, erreurs de filtres, pagination, état vide, chargement et reprise après erreur. Formulaires panier/authentification/checkout/compte/admin livrés ; audit navigateur reste à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
 | Performance / SEO | Partiel | Métadonnées produit/OG/canoniques, next/image, sitemap des produits publics et robots. Recherche locale mesurée ; Lighthouse ≥85 et aperçu social réel restent à vérifier. |
-| Tests | Partiel | 18 tests unitaires, 22 tests PostgreSQL et contrôles HTTP panier/catalogue/auth/checkout/compte passent en développement ; auth également vérifiée sur serveur de production local. Services de transitions, accès manipulés, tests navigateur et couverture ≥60 % restent à faire. |
+| Tests | Partiel | 20 tests unitaires, 28 tests PostgreSQL et contrôles HTTP panier/catalogue/auth/checkout/compte/admin passent en développement ; auth également vérifiée sur serveur de production local. Transitions et accès manipulés testés ; tests navigateur et couverture ≥60 % restent à faire. |
 | Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Paiement simulé documenté ; déploiement à faire. |
 | Déploiement | À faire | Choisir hébergement après socle persistant validé. |
 | Bonus | À faire | Reporter après validation du MVP ; wishlist, avis acheteurs, PDF, Stripe test et emails réels prioritaires à évaluer. |
@@ -64,7 +64,7 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 2. **Terminé :** catalogue branché sur BDD, fiche produit, recherche et filtres URL (A6 réservé au lot panier).
 3. **Terminé :** panier persistant, promotions serveur, authentification et fusion panier.
 4. **Terminé :** checkout invité transactionnel, tests concurrence/idempotence et emails simulés.
-5. **Espace client terminé (facture HTML simplifiée)** ; prochain lot : back-office avec protections testées.
+5. **Terminé :** espace client (facture HTML simplifiée) et back-office avec protections testées.
 6. Audit responsive/accessibilité/SEO/performance, documentation et déploiement ; bonus ensuite.
 
 ## Journal de validation
@@ -276,3 +276,9 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Formulaires labels/erreurs/focus/pending, conservation des champs non secrets après erreur. Présentation mobile-first, confirmation d’opération destructive et accès administration dans le header pour ADMIN. Protection effective côté serveur, indépendante du lien visible et de robots/noindex.
 - Descriptions produit : sous-ensemble Markdown sûr (paragraphes, titres ##, listes -), React échappe tout HTML ; liens/HTML enrichi non interprétés. Images renseignées par URL autorisée et alternative, pas d’upload de fichiers dans ce lot. Prix édité en TTC, HT affiché/calculé avec TVA ; édition HT directe simplifiée.
 - Parcours HTTP réussi : visiteur redirigé, client en 404 sur toutes routes admin, mutation capturée refusée après retrait du rôle en BDD malgré un rôle forgé ; création catégorie/produit/promo, image externe refusée, ancien stock refusé, filtres, transition illégale, expédition rejouée et email simulé unique. Fixtures dédiées nettoyées.
+
+### 2026-10-08 — finitions de gestion
+
+- Date limite de promo choisie avec calendrier, valide jusqu’à la fin du jour Europe/Paris. Conversion SQL vers minuit du lendemain (borne exclusive), heure d’été incluse ; édition affiche le dernier jour valide. Test du 1er juillet 2027 : expiration 22:00 UTC, soit minuit France le 2 juillet.
+- Cases à cocher conservées explicitement après erreur ; cibles de confirmation compactes et labels ≥44 px, focus visible dans les champs admin, résumés de modification accessibles au clavier.
+- Agrégats du dashboard exécutés successivement dans la même transaction, pour respecter la connexion PostgreSQL partagée et éviter un usage concurrent du driver déprécié. Pagination et requête unique des titres conservées.

@@ -83,7 +83,12 @@ export async function savePromo(db: PrismaClient, actorId: string, raw: unknown,
     const old = id ? await tx.promoCode.findUnique({ where: { id } }) : null;
     if (id && !old) throw new AdminError("Promotion indisponible.");
     if (old && input.maxUses !== "" && input.maxUses < old.usedCount) throw new AdminError("Le maximum ne peut pas être inférieur aux utilisations déjà consommées.");
-    const data = { code: input.code, type: input.type, value: input.type === "PERCENT" ? input.value / 100 : input.value, expiresAt: input.expiresAt ? new Date(input.expiresAt) : null, maxUses: input.maxUses === "" ? null : input.maxUses, isActive: input.isActive };
+    let expiresAt: Date | null = input.expiresAt ? new Date(input.expiresAt) : null;
+    if (input.expiresAt && /^\d{4}-\d{2}-\d{2}$/.test(input.expiresAt)) {
+      const [day] = await tx.$queryRaw<{ end: Date }[]>`SELECT ((${input.expiresAt}::date + 1)::timestamp AT TIME ZONE 'Europe/Paris') AS end`;
+      expiresAt = day.end;
+    }
+    const data = { code: input.code, type: input.type, value: input.type === "PERCENT" ? input.value / 100 : input.value, expiresAt, maxUses: input.maxUses === "" ? null : input.maxUses, isActive: input.isActive };
     return id ? tx.promoCode.update({ where: { id }, data }) : tx.promoCode.create({ data });
   });
 }
@@ -122,12 +127,10 @@ export async function adminDashboard(db: PrismaClient, actorId: string, now = ne
   return db.$transaction(async tx => {
     const [month] = await tx.$queryRaw<{ start: Date; end: Date }[]>`SELECT (date_trunc('month', ${now}::timestamptz AT TIME ZONE 'Europe/Paris') AT TIME ZONE 'Europe/Paris') AS start, ((date_trunc('month', ${now}::timestamptz AT TIME ZONE 'Europe/Paris') + interval '1 month') AT TIME ZONE 'Europe/Paris') AS end`;
     const monthly = { createdAt: { gte: month.start, lt: month.end } };
-    const [revenue, orders, unavailable, top] = await Promise.all([
-      tx.order.aggregate({ where: { ...monthly, status: { in: revenueStatuses } }, _sum: { totalCents: true }, _count: true }),
-      tx.order.count({ where: monthly }),
-      tx.product.count({ where: { stock: 0, status: "PUBLISHED", category: { isArchived: false } } }),
-      tx.orderItem.groupBy({ by: ["productId"], where: { productId: { not: null }, order: { status: { in: revenueStatuses } } }, _sum: { quantity: true }, orderBy: [{ _sum: { quantity: "desc" } }, { productId: "asc" }], take: 5 }),
-    ]);
+    const revenue = await tx.order.aggregate({ where: { ...monthly, status: { in: revenueStatuses } }, _sum: { totalCents: true }, _count: true });
+    const orders = await tx.order.count({ where: monthly });
+    const unavailable = await tx.product.count({ where: { stock: 0, status: "PUBLISHED", category: { isArchived: false } } });
+    const top = await tx.orderItem.groupBy({ by: ["productId"], where: { productId: { not: null }, order: { status: { in: revenueStatuses } } }, _sum: { quantity: true }, orderBy: [{ _sum: { quantity: "desc" } }, { productId: "asc" }], take: 5 });
     const products = await tx.product.findMany({ where: { id: { in: top.flatMap(row => row.productId ? [row.productId] : []) } }, select: { id: true, title: true } });
     return { revenue: revenue._sum.totalCents ?? 0, orders, average: revenue._count ? Math.round((revenue._sum.totalCents ?? 0) / revenue._count) : 0, unavailable, top: top.map(row => ({ title: products.find(product => product.id === row.productId)?.title ?? "Produit retiré", quantity: row._sum.quantity ?? 0 })) };
   }, { isolationLevel: "RepeatableRead" });
