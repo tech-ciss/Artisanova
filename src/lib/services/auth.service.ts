@@ -79,6 +79,10 @@ export async function authenticate(db: PrismaClient, raw: unknown, guestHash: st
   const valid = await compare(password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !valid) throw new AuthError("Email ou mot de passe incorrect.");
   return db.$transaction(async tx => {
+    // Serialize session issuance with profile/password changes and their revocation.
+    await tx.$queryRaw`SELECT id FROM users WHERE id = ${user.id} FOR UPDATE`;
+    const fresh = await tx.user.findUnique({ where: { id: user.id }, select: { passwordHash: true, email: true } });
+    if (!fresh || fresh.passwordHash !== user.passwordHash || fresh.email !== user.email) throw new AuthError("Votre compte a changé. Recommencez la connexion.");
     const attachedReference = await attachGuestOrder(tx, user.id, user.email, receiptHash);
     return { ...await issueSession(tx, user.id, guestHash, oldToken), attachedReference };
   }, { timeout: 15000 });

@@ -66,7 +66,7 @@ Le CLI et le client Prisma sont alignés sur 7.10.0. La configuration CLI et l�
 
 ## État et limites
 
-L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant et authentification sont disponibles. Le tunnel invité et compte est disponible. Gestion des adresses/profil/historique et back-office restent à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
+L’accueil, le catalogue et les fiches produit utilisent maintenant PostgreSQL. Catalogue : recherche insensible aux accents, filtres URL combinables, budget avec curseur, disponibilité, quatre tris et pagination de 12 produits. Fiches : galerie, artisan, stock, prix TTC et similaires. Panier persistant et authentification sont disponibles. Le tunnel invité et compte est disponible. Adresses, profil et historique sont disponibles ; le back-office reste à construire. Les illustrations SVG sont des visuels de démonstration, pas des photos de produits réels.
 
 Le fichier [SUIVI_PROJET.md](SUIVI_PROJET.md) consigne les décisions, réalisations, preuves et simplifications. Les audits navigateur, WCAG, Lighthouse et couverture des services restent à réaliser. Le projet n’est pas prêt à recevoir de véritables achats.
 
@@ -96,7 +96,7 @@ Contrôle du parcours panier : `npm run test:cart-http` (serveur local sur 127.0
 - Limitation PostgreSQL : 10 tentatives par email / 15 minutes et plafond global de 200 / 15 minutes. Les tentatives réussies comptent aussi. Pour une exploitation publique, compléter avec protection réseau et limites par IP provenant d’un proxy de confiance, puis planifier le nettoyage des données expirées.
 - `npm run test:auth-http` : formulaires POST, cookies, accès protégé, origine hostile, propriétaire de panier manipulé, fusion, révocation et expiration. Serveur local sur `127.0.0.1:3000` et base de démonstration requis ; comptes/paniers de test nettoyés.
 
-Cette étape livre l’authentification et un accueil de compte. Adresses, modification de profil, historique/factures, email de bienvenue, vérification email et récupération de mot de passe restent explicitement à réaliser. La commande invité est disponible sans création de compte.
+Cette étape livre l’authentification et un accueil de compte. Adresses, modification de profil, historique et document HTML de démonstration sont disponibles. Email de bienvenue, vérification email et récupération de mot de passe restent à réaliser. La commande invité est disponible sans création de compte.
 
 La validation auth HTTP peut aussi cibler `npm run start` après build avec `AUTH_HTTP_PRODUCTION=true npm run test:auth-http` : elle exige alors Secure sur les cookies et private/no-store sur le compte. Le test utilise un jar manuel en HTTP local ; il ne vérifie pas TLS ni la politique cookie d’un navigateur.
 
@@ -115,7 +115,7 @@ Utiliser une expiration future au format MM/AAAA (ex. 12/2035), le CVC **123**, 
 
 Le brouillon expire après une heure. Un changement de prix, contenu ou promo demande de reprendre la livraison. Paiement, stock, consommation promo, instantanés, historique, emails et panier vidé sont validés dans une même transaction. Un rejeu du paiement retourne la même commande. Les références suivent ART-AAAAMMJJ-séquence, avec jour Europe/Paris.
 
-La référence seule ne donne pas accès à la confirmation. L’invité utilise un cookie privé de reçu valable 30 jours pour sa dernière commande ; le client connecté doit en être propriétaire. Après achat, création ou connexion facultative au compte avec le même email et la preuve du reçu. Les commandes plus anciennes seront accessibles via l’historique client à réaliser.
+La référence seule ne donne pas accès à la confirmation. L’invité utilise un cookie privé de reçu valable 30 jours pour sa dernière commande ; le client connecté doit en être propriétaire. Après achat, création ou connexion facultative au compte avec le même email et la preuve du reçu. Les commandes rattachées au compte sont accessibles dans son historique.
 
 Deux emails (client et admin) sont enregistrés dans la transaction puis marqués SIMULATED, sans envoi externe. `ADMIN_NOTIFICATION_EMAIL` configure le destinataire admin, par défaut admin@artisanova.test. Si la simulation échoue après commit, relancer `npm run emails:simulate` sur la base locale de démonstration : seules les entrées PENDING sont traitées. Nettoyage des brouillons expirés à planifier au déploiement.
 
@@ -127,3 +127,14 @@ npm run emails:simulate   # simulation locale, aucun email envoyé
 ```
 
 Les tests HTTP soumettent les formulaires natifs et vérifient les protections et effets en base ; ils ne remplacent pas l’audit interactif mobile/clavier. En développement, le cache Prisma se renouvelle après changement des modèles ou noms de colonnes générés ; redémarrer Next après changement de type de colonne ou d’adaptateur.
+
+## Espace client
+
+Depuis `/compte` :
+
+- `/compte/adresses` : créer, modifier et supprimer des adresses françaises. Une adresse par défaut par usage (livraison/facturation), première adresse automatiquement sélectionnée ; un remplacement est choisi après suppression. Maximum 20 adresses.
+- `/compte/profil` : modifier nom/email ou mot de passe, avec confirmation par mot de passe actuel. Changer email ou mot de passe révoque toutes les sessions et exige une reconnexion. Les commandes conservent leurs coordonnées historiques. La vérification du nouvel email reste à ajouter.
+- `/compte/commandes` : historique paginé, statut, date, total, détail et suivi des statuts. Seules les commandes rattachées à ce compte apparaissent, aucune récupération par email seul.
+- Document de facture téléchargeable en HTML imprimable depuis chaque commande. Basé sur ses instantanés et protégé par propriétaire, sans cache. Document fictif sans valeur comptable ; PDF et mentions fiscales d’une entreprise réelle restent à réaliser.
+
+`npm run test:account-http` vérifie les formulaires, la révocation, l’historique et l’isolation des documents, avec nettoyage des fixtures. Serveur local sur 127.0.0.1:3000 et base de démonstration requis. Les tests PostgreSQL couvrent aussi les défauts d’adresse concurrents et l’impossibilité de modifier l’adresse d’un autre client.

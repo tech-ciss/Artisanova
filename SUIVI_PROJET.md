@@ -31,7 +31,7 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | B1–B2 panier | Fait | Panier invité/compte, badge global, quantités, suppression, fusion transactionnelle à inscription/connexion et persistance après déconnexion. |
 | B3–B4 calcul et promotion | Fait | Calcul serveur, code unique et consommation atomique limitée/expirable au paiement, concurrence testée. |
 | C1–C2 authentification | Fait | Inscription, connexion, déconnexion, session expirante, fusion du panier et achat invité vérifiés. |
-| C3–C5 espace client | À faire | Adresses, profil, historique de commandes et facture ; page compte minimale présente. |
+| C3–C5 espace client | Fait / simplifié | CRUD adresses et défaut par usage, profil avec preuve et révocation, historique paginé/détails privés. Facture HTML imprimable de démonstration ; PDF et conformité fiscale non réalisés. |
 | D1–D5 checkout | Fait / simplifié | Invité/compte, livraison/facturation, paiement simulé, stock/promo atomiques, référence, confirmation privée. Relais fictifs et France uniquement ; preuves dans le journal. |
 | E1–E6 admin | À faire | CRUD, protection serveur par rôle, transitions historisées, KPI et promotions. |
 | F emails | Partiel | Commande client/admin et reprise outbox simulées ; inscription, expédition et reset restent à faire. |
@@ -39,7 +39,7 @@ Objectif : couvrir les critères sur 100 avant les bonus, avec des preuves repro
 | UI/UX | Partiel | Catalogue mobile-first, champs associés aux labels, erreurs de filtres, pagination, état vide, chargement et reprise après erreur. Formulaires panier/authentification livrés ; audit navigateur et autres modules restent à faire. |
 | WCAG 2.2 AA | Partiel | Fondations présentes ; audit clavier, lecteur d’écran, contrastes, zoom 200/400 %, largeur 320 px et Lighthouse ≥90 non réalisés. Aucune certification annoncée. |
 | Performance / SEO | Partiel | Métadonnées produit/OG/canoniques, next/image, sitemap des produits publics et robots. Recherche locale mesurée ; Lighthouse ≥85 et aperçu social réel restent à vérifier. |
-| Tests | Partiel | 17 tests unitaires, 20 tests PostgreSQL et contrôles HTTP panier/catalogue/auth/checkout passent en développement ; auth également vérifiée sur serveur de production local. Services de transitions, accès manipulés, tests navigateur et couverture ≥60 % restent à faire. |
+| Tests | Partiel | 18 tests unitaires, 22 tests PostgreSQL et contrôles HTTP panier/catalogue/auth/checkout/compte passent en développement ; auth également vérifiée sur serveur de production local. Services de transitions, accès manipulés, tests navigateur et couverture ≥60 % restent à faire. |
 | Documentation / DX | Partiel | Démarrage documenté en 3 commandes, setup exécuté avec succès, comptes seed et commandes décrits. Paiement simulé documenté ; déploiement à faire. |
 | Déploiement | À faire | Choisir hébergement après socle persistant validé. |
 | Bonus | À faire | Reporter après validation du MVP ; wishlist, avis acheteurs, PDF, Stripe test et emails réels prioritaires à évaluer. |
@@ -64,7 +64,7 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 2. **Terminé :** catalogue branché sur BDD, fiche produit, recherche et filtres URL (A6 réservé au lot panier).
 3. **Terminé :** panier persistant, promotions serveur, authentification et fusion panier.
 4. **Terminé :** checkout invité transactionnel, tests concurrence/idempotence et emails simulés.
-5. Espace client puis back-office avec protections testées.
+5. **Espace client terminé (facture HTML simplifiée)** ; prochain lot : back-office avec protections testées.
 6. Audit responsive/accessibilité/SEO/performance, documentation et déploiement ; bonus ensuite.
 
 ## Journal de validation
@@ -250,3 +250,10 @@ Toutes les entrées mutatives devront être validées avec Zod côté serveur. L
 - Labels, erreurs par champ, focus sur premier champ invalide et boutons pending. Formulaires natifs utilisables sans JavaScript ; confirmation de suppression dans l’interface. Responsive en une colonne puis deux, cibles de navigation ≥44 px. Audit navigateur non effectué.
 - Facture de démonstration téléchargeable en HTML imprimable, issue des instantanés, échappement HTML, CSP sans scripts, attachment, private/no-store et nosniff. Sans numéro fiscal ni valeur comptable : entreprise et achats fictifs. Un vrai PDF et les mentions fiscales vérifiées restent à réaliser ; aucun bonus PDF revendiqué.
 - Choix d’adresse enregistrée livraison disponible au checkout ; facturation distincte saisie manuellement, sélection de facture enregistrée au checkout encore simplifiée.
+
+### 2026-10-08 — validation de l’espace client
+
+- 18 tests unitaires et 22 PostgreSQL réussis. Parcours HTTP compte et checkout réussis ; authentification réussie après redémarrage du serveur de test suite à une erreur JSON interne transitoire de Next. Origines hostiles intentionnellement rejetées lors des contrôles.
+- Isolation testée avec référence/adresse manipulée et propriétaire étranger : 404 ou refus sans fuite. Document sans cache, texte produit échappé ; absence de session : 401 sur téléchargement. Fixtures supprimées, aucun reset ni migration de ce lot.
+- Connexion et changement de profil partagent désormais le verrou utilisateur : une preuve de mot de passe périmée ne peut émettre une session après révocation. Test de connexion avec ancien mot de passe refusé et nouveau accepté ajouté.
+- Lint, TypeScript et compilation Webpack de production validés. Audit navigateur, PDF et vérification email restent explicitement non réalisés. Suivi/README et commandes de test actualisés ; commits locaux progressifs, aucun push.

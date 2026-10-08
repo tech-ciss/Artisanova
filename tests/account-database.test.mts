@@ -6,7 +6,7 @@ import { hash, compare } from "bcryptjs";
 import { createDatabaseClient } from "../src/lib/db/client";
 import { requireDemoDatabase } from "../scripts/demo-database";
 import { saveAddress, deleteAddress, updateProfile, accountOrder } from "../src/lib/services/account.service";
-import { throttleKey } from "../src/lib/services/auth.service";
+import { authenticate, throttleKey } from "../src/lib/services/auth.service";
 const db = createDatabaseClient(requireDemoDatabase());
 after(() => db.$disconnect());
 const address = { firstName: "Test", lastName: "Client", line1: "1 rue Fictive", line2: "", city: "Nantes", zip: "44000", country: "FR", type: "SHIPPING", isDefault: false };
@@ -42,6 +42,8 @@ test("profil : preuve, doublon, sessions révoquées et hash du nouveau mot de p
   assert.equal((await db.user.findUniqueOrThrow({where:{id:user.id}})).role,"CLIENT");
   await updateProfile(db,user.id,{currentPassword:"Ancien123!",password:"Nouveau123!",confirmation:"Nouveau123!"},true);
   assert.equal(await compare("Nouveau123!",(await db.user.findUniqueOrThrow({where:{id:user.id}})).passwordHash),true);
+  await assert.rejects(authenticate(db,{email:changed,password:"Ancien123!"},null));
+  assert.ok((await authenticate(db,{email:changed,password:"Nouveau123!"},null)).token);
   await db.authThrottle.deleteMany({where:{key:throttleKey(changed)}});
  } finally {await db.user.deleteMany({where:{id:{in:[user.id,other.id]}}});await db.authThrottle.deleteMany({where:{key:throttleKey(email)}});}
 });
