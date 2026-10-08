@@ -78,6 +78,7 @@ model User {
   cart          Cart?
   orders        Order[]
   statusChanges OrderStatusHistory[]
+  stockChanges  StockMovement[]
 
   @@map("users")
 }
@@ -353,6 +354,9 @@ model OrderSequence {
 }
 
 model StockMovement {
+  actorId   String?
+  reason    String?
+  actor     User? @relation(fields: [actorId], references: [id], onDelete: SetNull, map: "stock_movements_actor_fkey")
   id        String            @id @default(cuid())
   productId String
   orderId   String?
@@ -364,6 +368,7 @@ model StockMovement {
 
   @@unique([orderId, productId, kind])
   @@index([productId, createdAt])
+  @@index([actorId], map: "stock_movements_actor_idx")
   @@map("stock_movements")
 }
 
